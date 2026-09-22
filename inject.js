@@ -1149,12 +1149,12 @@
       : null;
     if (_nativeMatchMedia) {
       const MEDIA_QUERY_OVERRIDES = [
-        [/\\(prefers-color-scheme\\s*:\\s*dark\\)/i, false],
-        [/\\(prefers-color-scheme\\s*:\\s*light\\)/i, true],
-        [/\\(prefers-reduced-motion\\s*:\\s*reduce\\)/i, false],
-        [/\\(prefers-contrast\\s*:\\s*(more|less)\\)/i, false],
-        [/\\(forced-colors\\s*:\\s*active\\)/i, false],
-        [/\\(inverted-colors\\s*:\\s*inverted\\)/i, false],
+        [/\(prefers-color-scheme\s*:\s*dark\)/i, false],
+        [/\(prefers-color-scheme\s*:\s*light\)/i, true],
+        [/\(prefers-reduced-motion\s*:\s*reduce\)/i, false],
+        [/\(prefers-contrast\s*:\s*(more|less)\)/i, false],
+        [/\(forced-colors\s*:\s*active\)/i, false],
+        [/\(inverted-colors\s*:\s*inverted\)/i, false],
       ];
 
       function normalizedMatchMedia(query) {
