@@ -15,6 +15,7 @@ const manifest = {
     'storage',
     'tabs',
     'contentSettings',
+    'proxy',
   ],
   host_permissions: ['<all_urls>'],
   background: {
