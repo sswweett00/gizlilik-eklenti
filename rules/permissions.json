@@ -1,0 +1,22 @@
+[
+  {
+    "id": 500,
+    "priority": 100,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        {
+          "header": "Permissions-Policy",
+          "operation": "set",
+          "value": "geolocation=(), camera=(), microphone=(), accelerometer=(), gyroscope=(), magnetometer=(), usb=(), serial=(), hid=(), midi=(), bluetooth=()"
+        }
+      ]
+    },
+    "condition": {
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame"
+      ]
+    }
+  }
+]
