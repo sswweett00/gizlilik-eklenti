@@ -6,12 +6,14 @@ const manifest = JSON.parse(read('manifest.json'));
 const headerRules = JSON.parse(read('rules/rules.json'));
 const trackerRules = JSON.parse(read('rules/trackers.json'));
 const networkRules = JSON.parse(read('rules/network.json'));
+const adRules = JSON.parse(read('rules/adblock.json'));
+const urlRules = JSON.parse(read('rules/url-cleaner.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.4.0');
+assert.equal(manifest.version, '4.5.0');
 assert.deepEqual(
   manifest.permissions,
-  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs', 'contentSettings']
+  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'declarativeNetRequestFeedback', 'storage', 'tabs', 'contentSettings']
 );
 
 const worlds = manifest.content_scripts.map((entry) => ({
@@ -25,7 +27,7 @@ for (const path of ['background.js', 'bridge.js', 'inject.js', 'popup.js']) {
   assert.doesNotThrow(() => new Function(read(path)), path + ' should parse as JavaScript');
 }
 
-for (const [name, rules] of [['header', headerRules], ['tracker', trackerRules], ['network', networkRules]]) {
+for (const [name, rules] of [['header', headerRules], ['tracker', trackerRules], ['ad', adRules], ['network', networkRules], ['url', urlRules]]) {
   const ids = rules.map((rule) => rule.id);
   assert.equal(new Set(ids).size, ids.length, name + ' rule IDs must be unique');
   for (const rule of rules) {
@@ -71,6 +73,11 @@ for (const marker of ['siteExceptionBtn', 'rotateIdentityBtn', 'rulesetValue', '
 console.log('Privacy Shield static validation passed.');
 
 assert.ok(!manifest.permissions.includes('proxy'), 'implementation must not require the proxy API');
+assert.ok(!backgroundSource.includes('chrome.storage.sync'), 'settings must remain local-only');
+assert.ok(backgroundSource.includes("wanted.push('ad_rules')"), 'background must enable ad rules');
+assert.ok(backgroundSource.includes("wanted.push('url_rules')"), 'background must enable URL rules');
+assert.ok(urlRules.some((rule) => rule.action?.type === 'redirect' && rule.action?.redirect?.transform?.queryTransform?.removeParams?.includes('fbclid')), 'URL cleaner must remove fbclid');
+assert.ok(adRules.some((rule) => rule.action?.type === 'block'), 'ad rules must contain blocking rules');
 assert.ok(
   networkRules.some((rule) => rule.action?.type === 'block' && rule.condition?.resourceTypes?.includes('webtransport')),
   'WebTransport must be blocked in hardened network mode'
@@ -155,6 +162,10 @@ assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must 
 assert.ok(backgroundSource.includes("type !== 'webtransport' && type !== 'ping'"), 'site exceptions must not bypass critical transport/privacy blocks');
 assert.ok(popupSource.includes('Maximum direct mode'), 'popup must expose the maximum direct security posture');
 assert.ok(popupSource.includes('AEGIS-9'), 'popup must expose the AEGIS-9 system anonymity profile');
+for (const path of ['package.json','tsconfig.json','vite.config.ts','manifest.config.ts','src/shared/constants.ts','src/shared/types.ts','src/shared/storage.ts','src/shared/utils.ts','src/background/index.ts','src/background/ruleManager.ts','src/background/urlCleaner.ts','src/background/badgeManager.ts','src/content/content-isolated.ts','src/content/inject-main.iife.ts','src/popup/popup.html','src/popup/popup.ts','src/options/options.html','src/options/options.ts']) {
+  assert.ok(fs.existsSync(path), 'typed architecture file missing: ' + path);
+}
+
 for (const domain of ['ipapi.co','ipinfo.io','ipwho.is','ip-api.com','ipgeolocation.io','ipdata.co','freeipapi.com','geolocation-db.com','ipapi.com','ip2location.io','api.ipify.org','api64.ipify.org','ipify.org','ifconfig.co','ifconfig.me','icanhazip.com','ident.me','ip.sb','myip.com','checkip.amazonaws.com','checkip.dyndns.org','whatismyip.akamai.com','ipv4.icanhazip.com','ipv6.icanhazip.com','api.my-ip.io','seeip.org','ip.seeip.org']) {
   assert.ok(networkRules.some((rule) => rule.condition?.requestDomains?.includes(domain)), 'network rules must block common IP geolocation endpoint: ' + domain);
 }
@@ -189,3 +200,9 @@ assert.ok(read('scripts/windows/privacy-audit.ps1').includes('getmac /v'), 'Wind
 assert.ok(read('scripts/macos/privacy-audit.sh').includes('networksetup -listallhardwareports'), 'macOS privacy audit must inspect interfaces');
 
 console.log('Privacy Shield v3.0 static validation passed.');
+
+const pkg = JSON.parse(read('package.json'));
+assert.ok(pkg.scripts?.build === 'vite build', 'build script must use Vite');
+assert.ok(pkg.scripts?.typecheck === 'tsc --noEmit', 'typecheck script must use TypeScript');
+assert.ok(pkg.devDependencies?.['@crxjs/vite-plugin'], 'CRXJS build dependency must exist');
+assert.ok(pkg.devDependencies?.vite, 'Vite build dependency must exist');
