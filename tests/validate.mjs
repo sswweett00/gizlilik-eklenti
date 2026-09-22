@@ -151,6 +151,8 @@ assert.ok(popupSource.includes('Visible in direct mode'), 'popup must not falsel
 assert.ok(popupSource.includes('IP-location'), 'popup must disclose the IP-location limitation');
 assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum direct security mode must be the default');
 assert.ok(backgroundSource.includes("mode: 'direct_hardened'"), 'direct hardened network mode must remain the default');
+assert.ok(backgroundSource.includes('LOCAL_TOR_FORCED_MODULES'), 'Local Tor must enforce critical privacy modules');
+assert.ok(injectSource.includes('const strictIpLock = true;'), 'WebRTC page lock must remain present for fail-closed IP protection');
 assert.ok(backgroundSource.includes('torPort: 9050'), 'Tor service port 9050 must be supported');
 assert.ok(backgroundSource.includes('CHECK_TOR'), 'background must expose fail-closed Tor verification');
 assert.ok(backgroundSource.includes("geolocationMode: 'deny'"), 'geolocation must be deny-by-default');
