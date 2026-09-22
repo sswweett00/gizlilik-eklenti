@@ -97,43 +97,39 @@ async function applyPrivacySettings() {
 
   try {
     if (!s.enabled) {
-      // Clear everything we ever set, otherwise policies would persist
-      // while the extension reports itself as disabled.
-      for (const item of PRIVACY_ITEMS()) {
-        try {
-          await item.clear({ scope: 'regular' });
-        } catch (_) {}
+      const { privacyPolicy } = await chrome.storage.session.get('privacyPolicy');
+      for (const [key, setting] of HARDENED_PRIVACY_ITEMS()) {
+        const original = privacyPolicy?.original?.[key];
+        if (original !== undefined) {
+          try { await setting.set({ value: original, scope: 'regular' }); } catch (_) {}
+        }
       }
+      await chrome.storage.session.remove('privacyPolicy');
       return;
     }
 
-    if (s.modules.webrtc) {
-      await chrome.privacy.network.webRTCIPHandlingPolicy.set({
-        value: 'disable_non_proxied_udp',
-        scope: 'regular',
-      });
-    } else {
-      await chrome.privacy.network.webRTCIPHandlingPolicy.clear({ scope: 'regular' });
+    const { privacyPolicy } = await chrome.storage.session.get('privacyPolicy');
+    if (!privacyPolicy?.original) {
+      const original = {};
+      for (const [key, setting] of HARDENED_PRIVACY_ITEMS()) {
+        try {
+          const current = await setting.get({ scope: 'regular' });
+          if (current?.value !== undefined) original[key] = current.value;
+        } catch (_) {}
+      }
+      await chrome.storage.session.set({ privacyPolicy: { original, updatedAt: Date.now() } });
     }
 
-    await chrome.privacy.network.networkPredictionEnabled.set({
-      value: false,
-      scope: 'regular',
-    });
-    await chrome.privacy.websites.hyperlinkAuditingEnabled.set({
-      value: false,
-      scope: 'regular',
-    });
-    await chrome.privacy.websites.referrersEnabled.set({
-      value: false,
-      scope: 'regular',
-    });
-    await chrome.privacy.websites.thirdPartyCookiesAllowed.set({
-      value: false,
-      scope: 'regular',
-    });
+    for (const [key, setting, value] of HARDENED_PRIVACY_ITEMS()) {
+      if (key === 'network.webRTCIPHandlingPolicy' && !s.modules.webrtc) continue;
+      try {
+        await setting.set({ value, scope: 'regular' });
+      } catch (err) {
+        console.warn('[PrivacyShield] Privacy setting unavailable:', key, err?.message || err);
+      }
+    }
 
-    console.log('[PrivacyShield] Privacy API settings applied.');
+    console.log('[PrivacyShield] Direct privacy policy applied.');
   } catch (err) {
     console.error('[PrivacyShield] Error applying privacy settings:', err);
   }
