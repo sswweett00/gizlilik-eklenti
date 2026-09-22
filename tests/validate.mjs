@@ -8,7 +8,7 @@ const trackerRules = JSON.parse(read('rules/trackers.json'));
 const networkRules = JSON.parse(read('rules/network.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.3.0');
+assert.equal(manifest.version, '4.3.1');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs']
@@ -108,6 +108,8 @@ assert.ok(injectSource.includes('const strictIpLock = true;'), 'WebRTC must be h
 assert.ok(!injectSource.includes("setLocalDescription', function"), 'strict mode must not patch setLocalDescription at all');
 assert.ok(injectSource.includes('WebTransport disabled by Privacy Shield.'), 'WebTransport must be hard-blocked in the page world');
 assert.ok(injectSource.includes('WebSocket disabled by Privacy Shield.'), 'WebSocket must be hard-blocked in the page world');
+assert.ok(injectSource.includes('EventSource disabled by Privacy Shield.'), 'EventSource must be hard-blocked in the page world');
+assert.ok(injectSource.includes('Media capture disabled by Privacy Shield.'), 'camera/microphone capture must be blocked in maximum direct mode');
 assert.ok(injectSource.includes("function sendBeacon() { return false; }"), 'sendBeacon must be disabled in maximum direct mode');
 assert.ok(popupSource.includes('Direct Network Privacy'), 'popup must explain direct-connection privacy semantics');
 assert.ok(popupSource.includes('Visible to destination'), 'popup must not falsely claim direct-IP anonymity');
