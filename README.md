@@ -1,114 +1,57 @@
-# Privacy Shield 4.3
+# Privacy Shield 4.5
 
-Privacy Shield is a Manifest V3 Chromium extension focused on reducing common browser fingerprinting and tracking signals while keeping the underlying browser behavior as coherent as possible.
+Privacy Shield is a Manifest V3 privacy extension built around a hardened direct-connection Chromium/Firefox WebExtensions architecture.
 
-## What changed in 2.3.0
+## Implemented architecture
 
-- Per-tab identity profiles now correlate browser family/version, screen size, hardware capacity and GPU family instead of selecting every signal independently.
-- Static global User-Agent and Accept-Language rewriting was removed. Per-tab header rewriting now uses session rules after a tab profile is registered, avoiding a global header identity that conflicts with the JavaScript identity.
-- Canvas toBlob() now serializes a temporary noised canvas instead of restoring pixels before the asynchronous encoder runs.
-- Audio fingerprint protection no longer mutates live AudioBuffer channel data; analyser outputs and offline-render fingerprint reads are hardened instead.
-- The fake WEBGL_debug_renderer_info object was removed; WebGL parameters are masked while the real extension object remains intact.
-- Timezone spoofing is now date-aware so DST and historical offsets are not frozen to the current day.
-- Geolocation permission state is kept coherent with the spoof/deny mode through the Permissions API.
-- Privacy-sensitive settings are schema-normalized on every read/write.
-- Protection-affecting setting changes reload existing HTTP(S)/file tabs so module toggles actually take effect.
-- Per-site exclusions bypass both extension JS protections and DNR tracker/header rules after the settings are applied and the page is reloaded.
-- Added one-click identity rotation for the active tab.
-- Added richer live status, keyboard focus states and accessible module labels.
-- Removed unused scripting, activeTab and webNavigation permissions.
-- Added static validation tests and a GitHub Actions workflow.
+- `src/background/index.ts` — runtime entry point
+- `src/background/ruleManager.ts` — ruleset lifecycle
+- `src/background/urlCleaner.ts` — URL tracking-parameter rule generation
+- `src/background/badgeManager.ts` — current-document matched-rule badge
+- `src/content/content-isolated.ts` — isolated bridge entry
+- `src/content/inject-main.iife.ts` — MAIN-world hardening entry
+- `src/shared/constants.ts` — privacy constants
+- `src/shared/types.ts` — typed settings/state contracts
+- `src/shared/storage.ts` — validated local-only settings storage
+- `src/popup/` — dashboard packaged through Vite
+- `src/options/` — validated import/export and legacy-exclusion cleanup
+- `public/rules/` — tracker, ad, network and URL-cleaning rules
+- `tests/` — static regression and Vitest unit tests
 
-## Architecture
+CRXJS supports Vite-bundled isolated and MAIN-world content scripts; MAIN-world files can use the `.iife.ts` convention so they are emitted as self-contained IIFEs.
 
-### Main-world injector
+## Privacy layers
 
-`inject.js` runs at `document_start` and patches browser APIs that are commonly queried for fingerprinting:
+The hardened build blocks browser Geolocation, common public-IP discovery and third-party IP-geolocation APIs, WebRTC/WebTransport/WebSocket/EventSource/ping surfaces, Bluetooth/USB/HID/Serial/MIDI and sensor surfaces, high-entropy Client Hints, Storage Access API re-grants, service-worker registration and push subscriptions.
 
-- WebRTC
-- Canvas
-- WebGL
-- Audio
-- Fonts / geometry
-- Navigator / Client Hints
-- Screen
-- Geolocation
-- Timezone / Intl
-- Permissions
+It also standardizes the page locale to en-US and the HTTP Accept-Language profile, applies browser content-setting controls where supported, and removes high-confidence tracking query parameters with declarative DNR.
 
-The generated profile is stored in `sessionStorage` so navigation within the same tab keeps the same identity.
+Chrome documents contentSettings as a browser-level per-site control surface for location, camera, microphone, advanced clipboard access, notifications and cookies. Declarative Net Request supports query transformations including removal of query parameters.
 
-### Isolated-world bridge
+## Storage and threat model
 
-`bridge.js` is the only content-script layer with access to `chrome.runtime`. It relays profile/settings messages and carries the token used to authenticate background to main-world settings messages.
+Settings are stored with chrome.storage.local rather than sync/cloud storage. The MAIN-world hardening layer never trusts page-controlled sessionStorage for security state and never uses Math.random() for its privacy seed.
 
-### Background service worker
+One boundary is fundamental: a direct network connection still exposes its source public IP to the destination. The extension can block browser-side IP-discovery and geolocation APIs, but it cannot replace the source IP without an intermediary network path.
 
-`background.js` owns:
+## URL cleaning
 
-- Chrome privacy API configuration
-- static DNR rulesets
-- sanitized per-tab identity status/rotation bookkeeping
-- settings validation and persistence
-- site exception rules
-- tab lifecycle cleanup
-- extension-wide setting synchronization
+The URL cleaner removes high-confidence tracking parameters such as utm_*, gclid, fbclid, msclkid and yclid. Ambiguous generic parameters such as ref are intentionally preserved to reduce site breakage.
 
-It deliberately does **not** rewrite User-Agent or Accept-Language per tab. Keeping native Chromium request identity coherent avoids the BrowserLeaks failure mode where JavaScript, Client Hints and the first navigation advertise different platforms/versions.
+## Cross-browser target
 
-## Important limitation
+The manifest includes Firefox MV3 distribution metadata and the runtime uses WebExtensions APIs with feature checks where Chromium and Firefox differ. Firefox-specific signing metadata is included for MV3 distribution.
 
-A browser navigation request is sent before a `document_start` content script can report its generated profile. Therefore the very first request of a fresh navigation is intentionally not rewritten to a fake per-tab User-Agent. Subsequent requests are rewritten consistently with the registered tab profile. This avoids the worse failure mode where the first request uses one global identity while JavaScript advertises another.
+## Build
 
-## Validation
+npm install
+npm run typecheck
+npm test
+npm run validate
+npm run build
 
-The repository contains:
+The CI workflow runs the same validation sequence and verifies the generated dist/manifest.json.
 
-- `tests/validate.mjs` for manifest/rules/source invariants
-- `.github/workflows/validate.yml` for Node syntax checks and static regression checks
+## Direct-connection limitation
 
-The GitHub connector exposed no workflow run/status result for the commits in this repository, so the changes are committed to `main` but the CI result could not be independently observed from the available GitHub status endpoint.
-
-## Direct-Connection Privacy
-
-Privacy Shield does not use a proxy, VPN or Tor. It hardens browser-side privacy and blocks WebRTC/WebTransport leak surfaces, but a normal direct TCP/QUIC connection still exposes its source public IP to the destination server. No browser extension can change that network-layer fact without changing the network path.
-
-Chrome's privacy API exposes the WebRTC IP handling policy and other browser privacy settings, while Declarative Net Request can block and modify supported network requests, including the WebTransport resource type. citeturn126478search0turn126478search1
-
-See SECURITY_ARCHITECTURE.md for the full threat model, data flow, residual risks and production guidance.
-
-## Maximum Direct Privacy
-
-Version 3.1 defaults to a zero-cost `maximum_direct` posture: all privacy modules stay enabled while protection is on, geolocation is denied by default, WebRTC/WebTransport are blocked, and beacon/ping telemetry is blocked. Site exceptions cannot disable the page-world IP/transport protections in this mode.
-
-This does **not** randomize the public IP seen by a destination server. With no proxy, VPN, Tor, relay, or other intermediary, the destination sees the real source IP of the direct network connection. The extension can harden browser-side disclosure and fingerprinting, not rewrite the network source address. Chrome's privacy API exposes WebRTC IP handling and network prediction controls; Declarative Net Request supports blocking request resource types such as `ping` and `webtransport`.
-
-
-## Complete Zero-Cost Privacy Stack
-
-The repository now includes a complete deployment layer around the extension:
-
-- `docs/ZERO_COST_DEPLOYMENT.md` — Windows, Linux, macOS and Tails/Tor deployment model.
-- `docs/THREAT_MODEL.md` — attack surface and residual-risk matrix.
-- `docs/VERIFICATION.md` — IP, DNS, WebRTC, fingerprint and local-MAC verification.
-- `scripts/linux/` — NetworkManager random-MAC setup and privacy audit.
-- `scripts/windows/` — Windows privacy audit.
-- `scripts/macos/` — macOS privacy audit.
-
-The strongest zero-cost anonymity configuration is **native Tails + MAC address anonymization + Tor + Tor Browser**. Tor Project explicitly recommends Tor Browser rather than routing ordinary browsers through Tor because ordinary browsers can leak real IP/DNS/WebRTC data and have incompatible fingerprint/cookie behavior. [Tor Browser security guidance](https://support.torproject.org/tor-browser/security/using-tor-with-other-browsers/)
-
-Privacy Shield remains useful as a Chromium **direct-hardened** layer, but it does not and cannot alter a direct connection's source IP without an intermediary network path.
-
-
-## AEGIS-9 System Profile
-
-The repository now includes a system-level zero-cost companion architecture:
-
-- `docs/AEGIS9_ARCHITECTURE.md`
-- `scripts/qubes/aegis-install-whonix.sh`
-- `scripts/qubes/aegis-configure.sh`
-- `scripts/qubes/aegis-audit.sh`
-
-The supported Qubes-Whonix path is **Qubes R4.3 + Whonix 18** with `anon-whonix -> sys-whonix -> Tor` and a Whonix disposable template (`whonix-workstation-18-dvm`). Qubes documents `qvm-prefs <qube> netvm sys-whonix` and per-qube `default_dispvm`; Qubes-Whonix creates the standard anonymous qube topology through the official setup. citeturn303752search2turn602539search2turn602539search0
-
-Use the Qubes helper in **dry-run mode first**. It never changes the system unless `--apply` is explicitly supplied.
+This project is deliberately not a proxy/VPN/Tor implementation. If the destination must not see the real public IP, the browser must use Tor, VPN, proxy or another intermediary network path. Privacy Shield is the browser-side hardening layer; AEGIS-9 / Qubes-Whonix remains the system-level anonymity companion.
