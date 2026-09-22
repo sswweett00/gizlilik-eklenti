@@ -367,53 +367,7 @@ async function registerTabProfile(tabId, rawProfile) {
 
   // Header identity remains native/coherent. No per-tab header rewrite is installed.
   return;
-    const rules = await chrome.declarativeNetRequest.getSessionRules();
-    const removeRuleIds = rules
-      .filter((r) => (r.condition.tabIds || []).includes(tabId))
-      .map((r) => r.id);
-    const addRules = [];
 
-    // Reuse the group that already matches this exact identity
-    let reused = false;
-    for (const r of rules) {
-      if (removeRuleIds.includes(r.id)) continue;
-      if (sameHeaders(r.action.requestHeaders, profile)) {
-        removeRuleIds.push(r.id);
-        addRules.push(
-          buildSessionRule(r.id, (r.condition.tabIds || []).concat([tabId]), profile)
-        );
-        reused = true;
-        break;
-      }
-    }
-
-    if (!reused) {
-      const kept = new Set(
-        rules.map((r) => r.id).filter((id) => !removeRuleIds.includes(id))
-      );
-      let id = SESSION_RULE_ID_BASE;
-      while (kept.has(id)) id++;
-
-      if (id >= SESSION_RULE_ID_BASE + MAX_SESSION_RULES) {
-        // Out of rule IDs: evict the first group to make room.
-        const victim = rules.find(
-          (r) =>
-            !removeRuleIds.includes(r.id) &&
-            !(r.condition.tabIds || []).includes(tabId)
-        );
-        if (victim) {
-          removeRuleIds.push(victim.id);
-          for (const t of victim.condition.tabIds || []) delete store[t];
-          await setTabStore(store);
-        }
-        addRules.push(buildSessionRule(SESSION_RULE_ID_BASE, [tabId], profile));
-      } else {
-        addRules.push(buildSessionRule(id, [tabId], profile));
-      }
-    }
-
-    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds, addRules });
-  });
 }
 
 async function unregisterTab(tabId) {
