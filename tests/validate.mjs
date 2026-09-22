@@ -97,8 +97,7 @@ for (const marker of [
 }
 
 assert.ok(injectSource.includes('const strictIpLock = true;'), 'WebRTC must be hard-blocked in direct privacy mode');
-assert.ok(injectSource.includes("return orig.apply(this, nextArgs);"), 'setLocalDescription wrapper must preserve native overload arity');
-assert.ok(!injectSource.includes("orig.call(this, desc && desc.sdp ? sanitizeSDP(desc) : desc, args[1])"), 'setLocalDescription must not pass an explicit undefined callback');
+assert.ok(!injectSource.includes("setLocalDescription', function"), 'strict mode must not patch setLocalDescription at all');
 assert.ok(injectSource.includes('WebTransport disabled by Privacy Shield.'), 'WebTransport must be hard-blocked in the page world');
 assert.ok(popupSource.includes('Direct Network Privacy'), 'popup must explain direct-connection privacy semantics');
 assert.ok(popupSource.includes('Visible to destination'), 'popup must not falsely claim direct-IP anonymity');
