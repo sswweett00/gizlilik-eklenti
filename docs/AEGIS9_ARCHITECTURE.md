@@ -28,7 +28,7 @@ Disposable anon qube
 Tor Browser
 ```
 
-Qubes OS 4.3 provides strong isolation, disposables, Whonix integration and device isolation. Qubes-Whonix uses `sys-whonix` as the Tor gateway and `anon-whonix` for Tor-routed applications. citeturn978663search3turn549859search2
+Qubes OS R4.3 provides strong isolation, disposables, Whonix integration and device isolation. Qubes-Whonix uses `sys-whonix` as the Tor gateway and `anon-whonix` for Tor-routed applications. citeturn978663search3turn549859search2
 
 ## Recommended single-host profile
 
@@ -47,7 +47,7 @@ Official Qubes-Whonix documentation states that `sys-whonix` connects to Tor and
 
 Qubes disposables are ephemeral qubes whose persistent state is discarded when shut down. A qube can select its own default disposable template, and that template can itself be configured for Whonix networking. citeturn549859search1turn549859search7
 
-The provisioning helper in this repository defaults to dry-run and requires an explicit `--apply`.
+Current upstream support is Qubes R4.3 + Qubes-Whonix 18. The repository provides dry-run-by-default provisioning and audit helpers; changes require explicit `--apply`.
 
 ## Physical-isolation maximum profile
 
@@ -85,3 +85,23 @@ Privacy Shield 4.1 remains a Chromium direct-hardening extension:
 - native/coherent browser identity
 
 It does **not** replace the Tor network, Qubes isolation or Whonix routing.
+
+
+## Current Qubes-Whonix 18 disposable chain
+
+The supported current documentation path creates:
+
+~~~text
+sys-whonix
+anon-whonix
+whonix-workstation-18-dvm
+~~~
+
+and configures:
+
+~~~text
+anon-whonix netvm = sys-whonix
+anon-whonix default_dispvm = whonix-workstation-18-dvm
+~~~
+
+The Qubes-Whonix setup documentation describes Qubes R4.3 with Whonix 18 and the default disposable template `whonix-workstation-18-dvm`.
