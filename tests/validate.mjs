@@ -76,6 +76,7 @@ for (const marker of ['siteExceptionBtn', 'rotateIdentityBtn', 'rulesetValue', '
 console.log('Privacy Shield static validation passed.');
 
 assert.ok(!manifest.permissions.includes('proxy'), 'implementation must not require the proxy API');
+assert.equal(manifest.content_security_policy?.extension_pages, "script-src 'self'; object-src 'self';", 'extension-page CSP must block inline/eval script');
 assert.ok(!backgroundSource.includes('chrome.storage.sync'), 'settings must remain local-only');
 assert.ok(backgroundSource.includes("wanted.push('ad_rules')"), 'background must enable ad rules');
 assert.ok(backgroundSource.includes("wanted.push('url_rules')"), 'background must enable URL rules');
