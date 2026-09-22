@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 
 const read = (path) => fs.readFileSync(path, 'utf8');
@@ -24,7 +25,10 @@ assert.deepEqual(worlds[0], { world: 'ISOLATED', files: ['bridge.js'] });
 assert.deepEqual(worlds[1], { world: 'MAIN', files: ['inject.js'] });
 
 for (const path of ['background.js', 'bridge.js', 'inject.js', 'popup.js']) {
-  assert.doesNotThrow(() => new Function(read(path)), path + ' should parse as JavaScript');
+  assert.doesNotThrow(
+    () => execFileSync(process.execPath, ['--check', path], { stdio: 'pipe' }),
+    path + ' should parse as JavaScript/module'
+  );
 }
 
 for (const [name, rules] of [['header', headerRules], ['tracker', trackerRules], ['ad', adRules], ['network', networkRules], ['url', urlRules]]) {
@@ -147,6 +151,9 @@ assert.ok(backgroundSource.includes('if (s.modules.ads) wanted.push'), 'ad rules
 assert.ok(backgroundSource.includes('if (s.modules.urlCleaner) wanted.push'), 'URL cleaner ruleset must follow its toggle');
 assert.ok(backgroundSource.includes('function privacyModuleForKey'), 'privacy API settings must follow module toggles');
 assert.ok(backgroundSource.includes('HARDENED_CONTENT_SETTINGS'), 'browser-level content settings must enforce privacy');
+assert.ok(backgroundSource.includes('const SITE_EXCEPTION_RESOURCE_TYPES'), 'site exception resource types must be explicit');
+assert.ok(!backgroundSource.includes('RESOURCE_TYPES.filter'), 'site exceptions must not reference an undefined resource type list');
+assert.ok(backgroundSource.includes('await rebuildAllSessionRules();'), 'settings reapply must clear stale session rules');
 assert.ok(!backgroundSource.includes("Site exceptions are disabled in maximum direct mode."), 'site exceptions must no longer be hard-locked by security mode');
 assert.ok(injectSource.includes("securityMode: 'maximum_direct'"), 'injector must default to maximum direct mode');
 assert.ok(injectSource.includes('crypto.getRandomValues'), 'identity seed must prefer Web Crypto entropy');
