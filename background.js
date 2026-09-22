@@ -6,8 +6,9 @@
  *  - Toggle static rulesets (header rewrite + tracker block) via
  *    declarativeNetRequest.updateEnabledRulesets according to user settings
  *  - Track per-tab identities reported by inject.js (via bridge.js) and
- *    install per-tab session rules so that HTTP headers (User-Agent,
- *    Accept-Language, Sec-CH-UA*) match the JS-level identity of each tab
+ *    install per-tab session rules for subsequent requests so HTTP headers
+ *    (User-Agent, Accept-Language, Sec-CH-UA*) match the JS-level identity
+ *  - Manage site exceptions and identity rotation
  *  - Sync extension state via chrome.storage.sync and broadcast changes
  */
 
@@ -160,10 +161,13 @@ async function applyRuleSets() {
 // ─── Per-Tab Identity → Session DNR Rules ────────────────────────────────────
 //
 // inject.js generates a unique profile per tab and reports it through
-// bridge.js. We then make the network layer agree with the JS layer by
-// rewriting UA / Accept-Language / Sec-CH-UA headers *for that tab only*
-// (session rules, cleared on browser restart). Rules are grouped by
-// profile so tabs that happened to roll the same identity share one rule.
+// bridge.js. We then make the network layer agree with the JS layer for
+// subsequent requests by rewriting UA / Accept-Language / Sec-CH-UA headers
+// *for that tab only* (session rules, cleared on browser restart). The first
+// navigation request happens before a document_start content script can
+// register its profile, so it is intentionally left untouched rather than
+// being rewritten to a mismatching global identity. Rules are grouped by
+// profile so tabs that roll the same header identity share one rule.
 
 const SESSION_RULE_ID_BASE = 5000;
 const MAX_SESSION_RULES = 900; // DNR hard limit is 1000
@@ -746,7 +750,7 @@ async function buildStatus() {
       activeTab = {
         id: tab.id,
         host,
-        excluded: !!host && (settings.excludedDomains || []).includes(host),
+        excluded: !!host && (settings.excludedDomains || []).some((domain) => domainMatchesHost(host, domain)),
       };
     }
   } catch (_) {}
