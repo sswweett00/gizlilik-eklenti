@@ -1,7 +1,7 @@
 import { defineManifest } from '@crxjs/vite-plugin';
 import pkg from './package.json';
 
-export default defineManifest({
+const manifest = {
   manifest_version: 3,
   name: 'Privacy Shield',
   version: pkg.version,
@@ -72,4 +72,6 @@ export default defineManifest({
       },
     },
   },
-});
+};
+
+export default defineManifest(manifest);
