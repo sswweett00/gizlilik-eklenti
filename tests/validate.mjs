@@ -12,7 +12,7 @@ const urlRules = JSON.parse(read('rules/url-cleaner.json'));
 const permissionRules = JSON.parse(read('rules/permissions.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.8.0');
+assert.equal(manifest.version, '4.9.0');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'declarativeNetRequestFeedback', 'storage', 'tabs', 'contentSettings', 'proxy']
@@ -152,11 +152,13 @@ assert.ok(injectSource.includes('WebSocket disabled by Privacy Shield.'), 'WebSo
 assert.ok(injectSource.includes('EventSource disabled by Privacy Shield.'), 'EventSource must be hard-blocked in the page world');
 assert.ok(injectSource.includes('Media capture disabled by Privacy Shield.'), 'camera/microphone capture must be blocked in maximum direct mode');
 assert.ok(injectSource.includes("function sendBeacon() { return false; }"), 'sendBeacon must be disabled in maximum direct mode');
-assert.ok(popupSource.includes('Direct Network Privacy'), 'popup must explain direct-connection privacy semantics');
-assert.ok(popupSource.includes('Visible in direct mode'), 'popup must not falsely claim direct-IP anonymity');
+assert.ok(popupSource.includes('Anonymous Network Path'), 'popup must expose the Tor-only network path');
+assert.ok(!popupSource.includes('Visible in direct mode'), 'popup must not expose a direct-IP mode');
 assert.ok(popupSource.includes('IP-location'), 'popup must disclose the IP-location limitation');
-assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum direct security mode must be the default');
-assert.ok(backgroundSource.includes("mode: 'direct_hardened'"), 'direct hardened network mode must remain the default');
+assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum privacy baseline must remain active');
+assert.ok(backgroundSource.includes("networkPrivacy: {\n    mode: 'local_tor'"), 'Tor-only network mode must be the default');
+assert.ok(backgroundSource.includes("normalized.enabled = true"), 'network anonymity protection must not be disableable through settings');
+assert.ok(!backgroundSource.includes("mode: 'direct_hardened'"), 'direct hardened mode must not remain an available runtime path');
 assert.ok(backgroundSource.includes('LOCAL_TOR_FORCED_MODULES'), 'Local Tor must enforce critical privacy modules');
 assert.ok(injectSource.includes('const strictIpLock = true;'), 'WebRTC page lock must remain present for fail-closed IP protection');
 assert.ok(backgroundSource.includes('torPort: 9050'), 'Tor service port 9050 must be supported');
