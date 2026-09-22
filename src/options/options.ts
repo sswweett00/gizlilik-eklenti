@@ -119,7 +119,12 @@ exportButton.addEventListener('click',async()=>{
 });
 importInput.addEventListener('change',async()=>{
   const file=importInput.files?.[0]; if(!file)return;
-  try{settings=parseImportedSettings(await file.text()); await chrome.storage.local.set({settings}); render(settings); message.textContent='Configuration imported.';}
+  try{
+    const imported=parseImportedSettings(await file.text());
+    settings=await saveSettings(imported);
+    render(settings);
+    message.textContent='Configuration imported.';
+  }
   catch(error){message.textContent=error instanceof Error?error.message:'Import failed.';}
   finally{importInput.value='';}
 });
