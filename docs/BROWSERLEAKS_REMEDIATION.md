@@ -1,4 +1,4 @@
-# BrowserLeaks Remediation Matrix — Privacy Shield 4.8
+# BrowserLeaks Remediation Matrix — Privacy Shield 4.9
 
 This document maps the fields observed in BrowserLeaks-style diagnostics to the layer that can actually control them.
 
@@ -40,6 +40,6 @@ In particular:
 2. JA3/JA4, TCP/IP and HTTP/2 fingerprints are below the extension's control boundary.
 3. Cross-platform UA spoofing is harmful when it disagrees with Client Hints and the underlying network stack.
 4. The strongest zero-cost website-facing anonymity stack is native Tails + MAC anonymization + Tor + Tor Browser.
-5. Privacy Shield 4.8 Local Tor is a Chromium network-path integration plus hardening layer, not a replacement for Tor Browser.
+5. Privacy Shield 4.9 Local Tor is a Chromium network-path integration plus hardening layer, not a replacement for Tor Browser.
 
 Tor Project explicitly recommends Tor Browser rather than routing an ordinary browser through Tor because other browsers can expose real IP/DNS/WebRTC information and have different fingerprint/cookie/cache behavior.
