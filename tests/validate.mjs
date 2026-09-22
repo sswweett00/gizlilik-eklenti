@@ -8,10 +8,10 @@ const trackerRules = JSON.parse(read('rules/trackers.json'));
 const networkRules = JSON.parse(read('rules/network.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.3.2');
+assert.equal(manifest.version, '4.4.0');
 assert.deepEqual(
   manifest.permissions,
-  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs']
+  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs', 'contentSettings']
 );
 
 const worlds = manifest.content_scripts.map((entry) => ({
@@ -120,20 +120,31 @@ assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum 
 assert.ok(backgroundSource.includes("geolocationMode: 'deny'"), 'geolocation must be deny-by-default');
 assert.ok(new Set([...headerRules, ...trackerRules, ...networkRules].map((rule) => rule.id)).size === headerRules.length + trackerRules.length + networkRules.length, 'all static DNR rule IDs must be globally unique');
 assert.ok(backgroundSource.includes("normalized.modules[key] = true"), 'maximum mode must lock all modules on');
+assert.ok(backgroundSource.includes('normalized.enabled = true'), 'maximum mode must be fail-closed and cannot be disabled');
+assert.ok(backgroundSource.includes('HARDENED_CONTENT_SETTINGS'), 'browser-level content settings must enforce privacy');
+assert.ok(backgroundSource.includes("Site exceptions are disabled in maximum direct mode."), 'maximum mode must reject site exceptions');
 assert.ok(injectSource.includes("securityMode: 'maximum_direct'"), 'injector must default to maximum direct mode');
 assert.ok(injectSource.includes('crypto.getRandomValues'), 'identity seed must prefer Web Crypto entropy');
+assert.ok(injectSource.includes('getHighEntropyValues'), 'high-entropy Client Hints must be controlled');
+assert.ok(injectSource.includes('Sensor API disabled by Privacy Shield.'), 'sensor APIs must be blocked');
+assert.ok(injectSource.includes('Credential access'), 'credential APIs must be blocked');
+assert.ok(injectSource.includes('Storage Access API'), 'Storage Access API must be blocked');
+assert.ok(injectSource.includes('Service Workers'), 'service-worker registration must be blocked');
+assert.ok(injectSource.includes('Push subscription'), 'push subscriptions must be blocked');
 assert.ok(injectSource.includes('const actualUA = String(navigator.userAgent || \'\');'), 'page identity must derive from native UA');
 assert.ok(!injectSource.includes('const fakeUAData ='), 'Client Hints must not be replaced with a cross-platform fake profile');
 assert.ok(!backgroundSource.includes("{ header: 'User-Agent', operation: 'set'"), 'session rules must not rewrite User-Agent');
 assert.ok(!backgroundSource.includes("{ header: 'Accept-Language', operation: 'set'"), 'session rules must not rewrite Accept-Language');
 assert.ok(!backgroundSource.includes('SESSION_RULE_ID_BASE'), 'legacy session header engine must be removed');
 assert.ok(!backgroundSource.includes('buildHeadersForProfile'), 'legacy per-tab header builder must be removed');
+assert.ok(!read('bridge.js').includes('Math.random()'), 'bridge authentication must not use Math.random entropy');
+assert.ok(read('bridge.js').includes('crypto.getRandomValues'), 'bridge authentication must use Web Crypto entropy');
 assert.ok(injectSource.includes("defProp(Navigator.prototype, 'gpu'"), 'WebGPU must be blocked in maximum direct mode');
 assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must disable DNS prefetch hints');
 assert.ok(backgroundSource.includes("type !== 'webtransport' && type !== 'ping'"), 'site exceptions must not bypass critical transport/privacy blocks');
 assert.ok(popupSource.includes('Maximum direct mode'), 'popup must expose the maximum direct security posture');
 assert.ok(popupSource.includes('AEGIS-9'), 'popup must expose the AEGIS-9 system anonymity profile');
-for (const domain of ['ipapi.co','ipinfo.io','ipwho.is','ip-api.com','ipgeolocation.io','ipdata.co','freeipapi.com','geolocation-db.com','ipapi.com','ip2location.io']) {
+for (const domain of ['ipapi.co','ipinfo.io','ipwho.is','ip-api.com','ipgeolocation.io','ipdata.co','freeipapi.com','geolocation-db.com','ipapi.com','ip2location.io','api.ipify.org','api64.ipify.org','ipify.org','ifconfig.co','ifconfig.me','icanhazip.com','ident.me','ip.sb','myip.com','checkip.amazonaws.com','checkip.dyndns.org','whatismyip.akamai.com','ipv4.icanhazip.com','ipv6.icanhazip.com','api.my-ip.io','seeip.org','ip.seeip.org']) {
   assert.ok(networkRules.some((rule) => rule.condition?.requestDomains?.includes(domain)), 'network rules must block common IP geolocation endpoint: ' + domain);
 }
 
