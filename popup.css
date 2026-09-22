@@ -65,6 +65,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 }
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
 .status-dot.active{background:var(--accent);box-shadow:0 0 15px rgba(101,229,154,.75)}
+.status-dot.partial{background:#f7c95c;box-shadow:0 0 15px rgba(247,201,92,.55)}
 .status-dot.inactive{background:var(--danger);box-shadow:0 0 15px rgba(255,113,128,.45)}
 .status-label{font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 
