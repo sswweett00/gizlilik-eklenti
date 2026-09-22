@@ -602,7 +602,210 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 3: CANVAS NOISE (per-tab seeded PRNG)
+  // MODULE 3: DEVICE / SENSOR / PERSISTENCE SURFACE HARDENING
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (on('network')) {
+    const rejectAccess = (label) =>
+      Promise.reject(new DOMException(label + ' disabled by Privacy Shield.', 'NotAllowedError'));
+
+    // Physical-device access can reveal hardware, attached peripherals and
+    // stable device capabilities. Maximum mode exposes none of these surfaces.
+    const asyncDeviceMethods = [
+      [navigator.bluetooth, 'requestDevice', 'Bluetooth'],
+      [navigator.bluetooth, 'requestLEScan', 'Bluetooth LE'],
+      [navigator.usb, 'requestDevice', 'USB'],
+      [navigator.usb, 'getDevices', 'USB enumeration'],
+      [navigator.hid, 'requestDevice', 'HID'],
+      [navigator.hid, 'getDevices', 'HID enumeration'],
+      [navigator.serial, 'requestPort', 'Serial'],
+      [navigator.serial, 'getPorts', 'Serial enumeration'],
+    ];
+    for (const [api, name, label] of asyncDeviceMethods) {
+      if (!api || typeof api[name] !== 'function') continue;
+      try {
+        api[name] = markNative(function () { return rejectAccess(label); }, name);
+      } catch (_) {
+        try {
+          Object.defineProperty(api, name, {
+            value: markNative(function () { return rejectAccess(label); }, name),
+            configurable: true,
+            writable: true,
+          });
+        } catch (_) {}
+      }
+    }
+
+    if (typeof navigator.requestMIDIAccess === 'function') {
+      try {
+        Navigator.prototype.requestMIDIAccess = markNative(
+          function requestMIDIAccess() { return rejectAccess('MIDI'); },
+          'requestMIDIAccess'
+        );
+      } catch (_) {}
+    }
+
+    if (typeof navigator.getGamepads === 'function') {
+      try {
+        defProp(Navigator.prototype, 'getGamepads', {
+          value: markNative(function getGamepads() { return []; }, 'getGamepads'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+
+    if (navigator.credentials && typeof navigator.credentials.get === 'function') {
+      for (const name of ['get', 'create']) {
+        try {
+          defProp(navigator.credentials, name, {
+            value: markNative(function () { return rejectAccess('Credential access'); }, name),
+            writable: true,
+          });
+        } catch (_) {}
+      }
+    }
+
+    if (navigator.clipboard) {
+      for (const name of ['read', 'readText']) {
+        if (typeof navigator.clipboard[name] !== 'function') continue;
+        try {
+          defProp(navigator.clipboard, name, {
+            value: markNative(function () { return rejectAccess('Clipboard read'); }, name),
+            writable: true,
+          });
+        } catch (_) {}
+      }
+    }
+
+    if (typeof navigator.share === 'function') {
+      try {
+        defProp(Navigator.prototype, 'share', {
+          value: markNative(function share() { return rejectAccess('Web Share'); }, 'share'),
+          writable: true,
+        });
+        defProp(Navigator.prototype, 'canShare', {
+          value: markNative(function canShare() { return false; }, 'canShare'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+
+    // Sensors and motion events are unnecessary for ordinary page operation
+    // but provide high-entropy hardware/environment data.
+    for (const ctorName of [
+      'Accelerometer', 'Gyroscope', 'LinearAccelerationSensor',
+      'AbsoluteOrientationSensor', 'RelativeOrientationSensor',
+      'Magnetometer', 'AmbientLightSensor',
+    ]) {
+      const NativeCtor = window[ctorName];
+      if (!NativeCtor) continue;
+      try {
+        const BlockedCtor = function () {
+          throw new DOMException('Sensor API disabled by Privacy Shield.', 'NotAllowedError');
+        };
+        BlockedCtor.prototype = NativeCtor.prototype;
+        markNative(BlockedCtor, ctorName);
+        window[ctorName] = BlockedCtor;
+      } catch (_) {}
+    }
+
+    // Block motion/orientation event listeners without touching unrelated
+    // EventTarget listeners.
+    try {
+      overrideMethod(EventTarget.prototype, 'addEventListener', function (orig, args) {
+        const type = String(args[0] || '').toLowerCase();
+        if (type === 'deviceorientation' || type === 'deviceorientationabsolute' || type === 'devicemotion') {
+          return undefined;
+        }
+        return orig.apply(this, args);
+      });
+    } catch (_) {}
+
+    for (const prop of ['ondeviceorientation', 'ondeviceorientationabsolute', 'ondevicemotion']) {
+      try {
+        defProp(window, prop, { get: function () { return null; }, set: function () {} });
+      } catch (_) {}
+    }
+
+    // High-entropy Client Hints expose OS/architecture details not needed by
+    // ordinary pages. Network headers are separately stripped by DNR.
+    if (window.NavigatorUAData && NavigatorUAData.prototype &&
+        typeof NavigatorUAData.prototype.getHighEntropyValues === 'function') {
+      try {
+        defProp(NavigatorUAData.prototype, 'getHighEntropyValues', {
+          value: markNative(function getHighEntropyValues() {
+            return rejectAccess('High-entropy Client Hints');
+          }, 'getHighEntropyValues'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+
+    // Prevent cross-site storage re-grants that can reconnect third-party
+    // identity state after third-party cookies are blocked.
+    if (document && typeof document.requestStorageAccess === 'function') {
+      try {
+        defProp(Document.prototype, 'requestStorageAccess', {
+          value: markNative(function requestStorageAccess() {
+            return rejectAccess('Storage Access API');
+          }, 'requestStorageAccess'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+    if (document && typeof document.requestStorageAccessFor === 'function') {
+      try {
+        defProp(Document.prototype, 'requestStorageAccessFor', {
+          value: markNative(function requestStorageAccessFor() {
+            return rejectAccess('Storage Access API');
+          }, 'requestStorageAccessFor'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+    if (document && typeof document.hasStorageAccess === 'function') {
+      try {
+        defProp(Document.prototype, 'hasStorageAccess', {
+          value: markNative(function hasStorageAccess() { return Promise.resolve(false); }, 'hasStorageAccess'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+
+    // Prevent persistent service-worker/push state from becoming a durable
+    // cross-session identifier.
+    if (navigator.serviceWorker && ServiceWorkerContainer && ServiceWorkerContainer.prototype) {
+      try {
+        defProp(ServiceWorkerContainer.prototype, 'register', {
+          value: markNative(function register() { return rejectAccess('Service Workers'); }, 'register'),
+          writable: true,
+        });
+        defProp(ServiceWorkerContainer.prototype, 'getRegistration', {
+          value: markNative(function getRegistration() { return Promise.resolve(undefined); }, 'getRegistration'),
+          writable: true,
+        });
+        defProp(ServiceWorkerContainer.prototype, 'getRegistrations', {
+          value: markNative(function getRegistrations() { return Promise.resolve([]); }, 'getRegistrations'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+    if (window.PushManager && PushManager.prototype && typeof PushManager.prototype.subscribe === 'function') {
+      try {
+        defProp(PushManager.prototype, 'subscribe', {
+          value: markNative(function subscribe() { return rejectAccess('Push subscription'); }, 'subscribe'),
+          writable: true,
+        });
+        defProp(PushManager.prototype, 'getSubscription', {
+          value: markNative(function getSubscription() { return Promise.resolve(null); }, 'getSubscription'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MODULE 4: CANVAS NOISE (per-tab seeded PRNG)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('canvas')) {
@@ -680,7 +883,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 4: WebGL PARAMETER MASKING (per-tab GPU profile)
+  // MODULE 5: WebGL PARAMETER MASKING (per-tab GPU profile)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('webgl')) {
@@ -718,7 +921,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 5: AUDIOCONTEXT NOISE (per-tab seeded PRNG)
+  // MODULE 6: AUDIOCONTEXT NOISE (per-tab seeded PRNG)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('audio')) {
@@ -764,7 +967,7 @@
     }
   }
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 6: FONT ENUMERATION & DOM GEOMETRY PROTECTION
+  // MODULE 7: FONT ENUMERATION & DOM GEOMETRY PROTECTION
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('fonts')) {
@@ -826,7 +1029,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 7: NAVIGATOR OVERRIDES (per-tab profile)
+  // MODULE 8: NAVIGATOR OVERRIDES (per-tab profile)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('navigator')) {
@@ -886,7 +1089,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 8: PERMISSIONS API COHERENCE
+  // MODULE 9: PERMISSIONS API COHERENCE
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('permissions') && navigator.permissions && navigator.permissions.query) {
@@ -916,14 +1119,14 @@
     });
   }
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 9: CLIENT HINTS COHERENCE
+  // MODULE 10: CLIENT HINTS COHERENCE
   // ═══════════════════════════════════════════════════════════════════════════
 
   // Never replace low-entropy Client Hints with a cross-platform fake profile.
   // The request headers and JS values must describe the same Chromium build.
   // High-entropy hints are removed by declarativeNetRequest rules.
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 10: SCREEN OVERRIDES (per-tab profile)
+  // MODULE 11: SCREEN OVERRIDES (per-tab profile)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('screen')) {
@@ -959,7 +1162,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 11: GEOLOCATION SPOOFING (per-tab city + micro-jitter)
+  // MODULE 12: GEOLOCATION SPOOFING (per-tab city + micro-jitter)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('geolocation')) {
@@ -1029,7 +1232,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 12: TIMEZONE & Intl SPOOFING (per-tab timezone)
+  // MODULE 13: TIMEZONE & Intl SPOOFING (per-tab timezone)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('timezone')) {
