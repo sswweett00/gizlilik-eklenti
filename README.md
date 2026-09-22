@@ -1,4 +1,4 @@
-# Privacy Shield 3.1
+# Privacy Shield 4.0
 
 Privacy Shield is a Manifest V3 Chromium extension focused on reducing common browser fingerprinting and tracking signals while keeping the underlying browser behavior as coherent as possible.
 
@@ -81,3 +81,19 @@ See SECURITY_ARCHITECTURE.md for the full threat model, data flow, residual risk
 Version 3.1 defaults to a zero-cost `maximum_direct` posture: all privacy modules stay enabled while protection is on, geolocation is denied by default, WebRTC/WebTransport are blocked, and beacon/ping telemetry is blocked. Site exceptions cannot disable the page-world IP/transport protections in this mode.
 
 This does **not** randomize the public IP seen by a destination server. With no proxy, VPN, Tor, relay, or other intermediary, the destination sees the real source IP of the direct network connection. The extension can harden browser-side disclosure and fingerprinting, not rewrite the network source address. Chrome's privacy API exposes WebRTC IP handling and network prediction controls; Declarative Net Request supports blocking request resource types such as `ping` and `webtransport`.
+
+
+## Complete Zero-Cost Privacy Stack
+
+The repository now includes a complete deployment layer around the extension:
+
+- `docs/ZERO_COST_DEPLOYMENT.md` — Windows, Linux, macOS and Tails/Tor deployment model.
+- `docs/THREAT_MODEL.md` — attack surface and residual-risk matrix.
+- `docs/VERIFICATION.md` — IP, DNS, WebRTC, fingerprint and local-MAC verification.
+- `scripts/linux/` — NetworkManager random-MAC setup and privacy audit.
+- `scripts/windows/` — Windows privacy audit.
+- `scripts/macos/` — macOS privacy audit.
+
+The strongest zero-cost anonymity configuration is **native Tails + MAC address anonymization + Tor + Tor Browser**. Tor Project explicitly recommends Tor Browser rather than routing ordinary browsers through Tor because ordinary browsers can leak real IP/DNS/WebRTC data and have incompatible fingerprint/cookie behavior. [Tor Browser security guidance](https://support.torproject.org/tor-browser/security/using-tor-with-other-browsers/)
+
+Privacy Shield remains useful as a Chromium **direct-hardened** layer, but it does not and cannot alter a direct connection's source IP without an intermediary network path.
