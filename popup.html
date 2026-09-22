@@ -187,6 +187,23 @@
         </label>
       </div>
 
+      <div class="module-card" data-module="permissions">
+        <div class="module-icon module-icon--permissions">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M10 3l6 3v4c0 3.3-2.4 6.3-6 7-3.6-.7-6-3.7-6-7V6l6-3z"/>
+            <path d="M7.5 10l1.7 1.7 3.5-3.5"/>
+          </svg>
+        </div>
+        <div class="module-info">
+          <span class="module-name">Permissions</span>
+          <span class="module-desc">Geo permission coherence</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="module-toggle" data-key="permissions" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
     </div>
   </section>
 
@@ -251,12 +268,30 @@
         <button class="quick-btn" data-lat="52.5200" data-lng="13.4050">🏛 Berlin</button>
       </div>
     </div>
+
+    <div class="site-controls">
+      <div class="site-control-row">
+        <div class="site-info">
+          <span class="site-label">Current site</span>
+          <span class="site-host" id="currentSiteHost">Detecting…</span>
+        </div>
+        <button class="site-btn" id="siteExceptionBtn" type="button">Exclude site</button>
+      </div>
+      <div class="site-control-row">
+        <div class="site-info">
+          <span class="site-label">Tab identity</span>
+          <span class="site-host" id="identitySummary">Stable for this tab</span>
+        </div>
+        <button class="site-btn site-btn--secondary" id="rotateIdentityBtn" type="button">Rotate identity</button>
+      </div>
+      <p class="site-help">Excluded sites bypass privacy modifications and tracker blocking. Changes are applied on the next page load.</p>
+    </div>
   </section>
 
   <!-- Status Panel -->
   <section class="status-section">
     <h2 class="section-title">Live Status</h2>
-    <div class="status-grid">
+    <div class="status-grid" aria-live="polite">
       <div class="status-item">
         <span class="status-item-label">WebRTC Policy</span>
         <span class="status-item-value" id="webrtcPolicyValue">—</span>
@@ -264,6 +299,14 @@
       <div class="status-item">
         <span class="status-item-label">Geo Mode</span>
         <span class="status-item-value" id="geoModeValue">—</span>
+      </div>
+      <div class="status-item">
+        <span class="status-item-label">Rulesets</span>
+        <span class="status-item-value" id="rulesetValue">—</span>
+      </div>
+      <div class="status-item">
+        <span class="status-item-label">Tracked Tabs</span>
+        <span class="status-item-value" id="trackedTabsValue">—</span>
       </div>
       <div class="status-item status-item--wide">
         <span class="status-item-label">This Tab's Identity</span>
@@ -275,7 +318,7 @@
   <!-- Footer -->
   <footer class="footer">
     <button class="btn-reset" id="resetBtn" title="Reset all settings to defaults">Reset Defaults</button>
-    <span class="footer-version">v2.1.0</span>
+    <span class="footer-version">v2.2.0</span>
   </footer>
 
   <script src="popup.js"></script>
