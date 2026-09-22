@@ -743,6 +743,13 @@ async function buildStatus() {
 
   const tabProfiles = await getTabStore();
 
+  let matchedRuleCount = 0;
+  if (activeTab && typeof activeTab.id === 'number') {
+    try {
+      matchedRuleCount = (await chrome.declarativeNetRequest.getMatchedRules({ tabId: activeTab.id })).rules.length;
+    } catch (_) {}
+  }
+
   return {
     enabled: settings.enabled,
     modules: settings.modules,
@@ -754,6 +761,7 @@ async function buildStatus() {
     sessionRuleCount,
     trackedTabCount: Object.keys(tabProfiles).length,
     siteExceptionCount,
+    matchedRuleCount,
     activeTab,
     tabProfile,
     networkPrivacy,
