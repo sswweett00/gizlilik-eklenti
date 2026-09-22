@@ -1,11 +1,11 @@
-# BrowserLeaks Remediation Matrix — Privacy Shield 4.1
+# BrowserLeaks Remediation Matrix — Privacy Shield 4.3.2
 
 This document maps the fields observed in BrowserLeaks-style diagnostics to the layer that can actually control them.
 
 | BrowserLeaks signal | Extension | Tor/Tails | Notes |
 | --- | --- | --- | --- |
 | Public IP | No | Yes | A direct TCP/QUIC connection always exposes its source IP to the destination. |
-| IP geolocation | No | Yes | Public-IP geolocation follows the network-visible address. |
+| IP geolocation | Partly | Yes | Third-party IP-geolocation APIs can be blocked, but the destination still sees the direct source IP and can geolocate it server-side. |
 | ISP / ASN | No | Yes | The destination can infer the network owner of the source IP. |
 | Hostname of public IP | No | Yes | Reverse DNS belongs to the visible network address. |
 | WebRTC local/public IP | Yes | Yes | Privacy Shield hard-blocks page WebRTC and Chrome WebRTC policy. |
@@ -16,7 +16,7 @@ This document maps the fields observed in BrowserLeaks-style diagnostics to the 
 | WebGL | Partly | Yes | WebGL is hardened, but Chrome still has a different fingerprint architecture from Tor Browser. |
 | WebGPU | Yes | Yes | Page API is redacted in maximum mode. |
 | Fonts | Yes | Yes | Font/geometry protections reduce browser fingerprinting. |
-| Geolocation API | Yes | Yes | Maximum mode is deny-by-default. |
+| Geolocation API | Yes | Yes | Maximum mode hard-denies the page API and reports geolocation permission as denied. |
 | Screen/window fingerprint | Partly | Yes | Tor Browser's letterboxing/standardization is stronger than a Chromium extension can reproduce. |
 | CPU/device memory | Partly | Yes | Extension can normalize browser-visible values, but this is not equivalent to Tor Browser's complete fingerprint model. |
 | TLS JA3/JA4 | No | Partly | A MV3 extension does not control Chromium's TLS ClientHello stack. Tor Browser/Tor's own stack changes the visible network behavior. |
@@ -25,6 +25,10 @@ This document maps the fields observed in BrowserLeaks-style diagnostics to the 
 | MAC address on LAN | No | Yes | Websites normally do not receive L2 MAC directly. Local AP/switch can; use Tails/OS private MAC. |
 | Tracker correlation | Yes | Yes | DNR tracker blocking plus Tor Browser isolation are stronger together. |
 | Cookies / identity | Partly | Yes | A user can still self-identify by logging into an account. |
+
+## Location-specific conclusion
+
+Privacy Shield now hard-denies the browser Geolocation API and blocks common third-party IP-geolocation API endpoints. This prevents many page-side lookup shortcuts, but it cannot prevent the website that receives the connection from geolocating the source public IP.
 
 ## The critical conclusion
 
