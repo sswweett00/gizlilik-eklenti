@@ -1,3 +1,5 @@
+import './src/background/badgeManager.js';
+
 /**
  * Privacy Shield — Background Service Worker
  *
@@ -9,7 +11,7 @@
  *    install per-tab session rules for subsequent requests so HTTP headers
  *    (User-Agent, Accept-Language, Sec-CH-UA*) match the JS-level identity
  *  - Manage site exceptions and identity rotation
- *  - Sync extension state via chrome.storage.sync and broadcast changes
+ *  - Sync extension state via chrome.storage.local and broadcast changes
  */
 
 // ─── Default Settings ────────────────────────────────────────────────────────
@@ -63,10 +65,10 @@ function publicSettings(s) {
 chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('[PrivacyShield] Installed:', details.reason);
 
-  const stored = await chrome.storage.sync.get('settings');
+  const stored = await chrome.storage.local.get('settings');
   const merged = normalizeSettings(stored.settings || DEFAULT_SETTINGS);
   if (JSON.stringify(merged) !== JSON.stringify(stored.settings || null)) {
-    await chrome.storage.sync.set({ settings: merged });
+    await chrome.storage.local.set({ settings: merged });
   }
 
   await applyPrivacySettings();
@@ -154,56 +156,26 @@ const HARDENED_CONTENT_SETTINGS = () => [
 
 async function applyContentSettings() {
   try {
-    const state = await chrome.storage.session.get('contentSettingsPolicy');
-    if (!state.contentSettingsPolicy?.original) {
-      const original = {};
-      for (const [key, setting] of HARDENED_CONTENT_SETTINGS()) {
-        try {
-          const current = await setting.get({
-            primaryUrl: 'https://example.com/',
-            secondaryUrl: 'https://example.com/',
-            incognito: false,
-          });
-          if (current?.setting !== undefined) original[key] = current.setting;
-        } catch (_) {}
-      }
-      await chrome.storage.session.set({
-        contentSettingsPolicy: { original, updatedAt: Date.now() },
-      });
-    }
-
     const currentSettings = await getSettings();
+    const settingsList = HARDENED_CONTENT_SETTINGS();
+
     if (!currentSettings.enabled) {
-      const saved = (await chrome.storage.session.get('contentSettingsPolicy')).contentSettingsPolicy?.original || {};
-      for (const [key, setting] of HARDENED_CONTENT_SETTINGS()) {
-        if (saved[key] !== undefined) {
-          try { await setting.clear({ scope: 'regular' }); } catch (_) {}
-          try {
-            await setting.set({
-              primaryPattern: '<all_urls>',
-              secondaryPattern: '<all_urls>',
-              setting: saved[key],
-              scope: 'regular',
-            });
-          } catch (_) {}
-        } else {
-          try { await setting.clear({ scope: 'regular' }); } catch (_) {}
-        }
+      for (const [, setting] of settingsList) {
+        try { await setting.clear({ scope: 'regular' }); } catch (_) {}
       }
-      await chrome.storage.session.remove('contentSettingsPolicy');
       return;
     }
 
-    for (const [key, setting, value] of HARDENED_CONTENT_SETTINGS()) {
+    for (const [, setting, value] of settingsList) {
       try {
         await setting.set({
           primaryPattern: '<all_urls>',
-          secondaryPattern: key === 'location' ? '<all_urls>' : '<all_urls>',
+          secondaryPattern: '<all_urls>',
           setting: value,
           scope: 'regular',
         });
       } catch (err) {
-        console.warn('[PrivacyShield] Content setting unavailable:', key, err?.message || err);
+        console.warn('[PrivacyShield] Content setting unavailable:', err?.message || err);
       }
     }
   } catch (err) {
@@ -293,6 +265,8 @@ async function applyRuleSets() {
   const wanted = [];
   if (s.enabled && s.modules.headers) wanted.push(HEADER_RULESET_ID);
   if (s.enabled) wanted.push(TRACKER_RULESET_ID);
+  if (s.enabled) wanted.push('ad_rules');
+  if (s.enabled) wanted.push('url_rules');
   if (s.enabled && s.modules.network) wanted.push('network_rules');
 
   try {
@@ -608,14 +582,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'UPDATE_SETTINGS': {
           const current = await getSettings();
           const updated = normalizeSettings(deepMerge(current, sanitizeIncomingSettings(message.settings)));
-          await chrome.storage.sync.set({ settings: updated });
+          await chrome.storage.local.set({ settings: updated });
           sendResponse({ success: true, settings: updated });
           break;
         }
 
         case 'RESET_SETTINGS': {
           const defaults = normalizeSettings(DEFAULT_SETTINGS);
-          await chrome.storage.sync.set({ settings: defaults });
+          await chrome.storage.local.set({ settings: defaults });
           sendResponse({ success: true, settings: defaults });
           break;
         }
@@ -686,7 +660,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           else excludedDomains.delete(domain);
 
           const updated = normalizeSettings({ ...current, excludedDomains: [...excludedDomains] });
-          await chrome.storage.sync.set({ settings: updated });
+          await chrome.storage.local.set({ settings: updated });
           sendResponse({ success: true, excluded, host: domain, settings: updated });
           break;
         }
@@ -721,7 +695,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Settings are normalized at every read so old/corrupted storage cannot bypass validation.
 async function getSettings() {
-  const { settings } = await chrome.storage.sync.get('settings');
+  const { settings } = await chrome.storage.local.get('settings');
   return settings ? normalizeSettings(settings) : normalizeSettings(DEFAULT_SETTINGS);
 }
 
@@ -816,7 +790,7 @@ async function broadcastSettingsToTabs() {
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'sync' || !changes.settings) return;
+  if (area !== 'local' || !changes.settings) return;
   console.log('[PrivacyShield] Settings changed, reapplying...');
   const previousSettings = changes.settings.oldValue ? normalizeSettings(changes.settings.oldValue) : null;
   const nextSettings = normalizeSettings(changes.settings.newValue || {});
