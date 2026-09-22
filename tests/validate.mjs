@@ -10,7 +10,7 @@ const adRules = JSON.parse(read('rules/adblock.json'));
 const urlRules = JSON.parse(read('rules/url-cleaner.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.5.1');
+assert.equal(manifest.version, '4.6.0');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'declarativeNetRequestFeedback', 'storage', 'tabs', 'contentSettings']
@@ -137,10 +137,16 @@ assert.ok(popupSource.includes('IP-location'), 'popup must disclose the IP-locat
 assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum direct security mode must be the default');
 assert.ok(backgroundSource.includes("geolocationMode: 'deny'"), 'geolocation must be deny-by-default');
 assert.ok(new Set([...headerRules, ...trackerRules, ...networkRules, ...urlRules].map((rule) => rule.id)).size === headerRules.length + trackerRules.length + networkRules.length + urlRules.length, 'all static DNR rule IDs must be globally unique');
-assert.ok(backgroundSource.includes("normalized.modules[key] = true"), 'maximum mode must lock all modules on');
-assert.ok(backgroundSource.includes('normalized.enabled = true'), 'maximum mode must be fail-closed and cannot be disabled');
+assert.ok(backgroundSource.includes('trackers: true'), 'tracker blocking must be independently configurable');
+assert.ok(backgroundSource.includes('ads: true'), 'ad blocking must be independently configurable');
+assert.ok(backgroundSource.includes('urlCleaner: true'), 'URL cleaning must be independently configurable');
+assert.ok(backgroundSource.includes('browserPrivacy: true'), 'browser privacy must be independently configurable');
+assert.ok(backgroundSource.includes('if (s.modules.trackers) wanted.push'), 'tracker ruleset must follow its toggle');
+assert.ok(backgroundSource.includes('if (s.modules.ads) wanted.push'), 'ad ruleset must follow its toggle');
+assert.ok(backgroundSource.includes('if (s.modules.urlCleaner) wanted.push'), 'URL cleaner ruleset must follow its toggle');
+assert.ok(backgroundSource.includes('function privacyModuleForKey'), 'privacy API settings must follow module toggles');
 assert.ok(backgroundSource.includes('HARDENED_CONTENT_SETTINGS'), 'browser-level content settings must enforce privacy');
-assert.ok(backgroundSource.includes("Site exceptions are disabled in maximum direct mode."), 'maximum mode must reject site exceptions');
+assert.ok(!backgroundSource.includes("Site exceptions are disabled in maximum direct mode."), 'site exceptions must no longer be hard-locked by security mode');
 assert.ok(injectSource.includes("securityMode: 'maximum_direct'"), 'injector must default to maximum direct mode');
 assert.ok(injectSource.includes('crypto.getRandomValues'), 'identity seed must prefer Web Crypto entropy');
 assert.ok(!injectSource.includes('Math.random('), 'privacy seed generation must not fall back to Math.random');
@@ -170,7 +176,7 @@ assert.ok(read('bridge.js').includes('crypto.getRandomValues'), 'bridge authenti
 assert.ok(injectSource.includes("defProp(Navigator.prototype, 'gpu'"), 'WebGPU must be blocked in maximum direct mode');
 assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must disable DNS prefetch hints');
 assert.ok(backgroundSource.includes("type !== 'webtransport' && type !== 'ping'"), 'site exceptions must not bypass critical transport/privacy blocks');
-assert.ok(popupSource.includes('Maximum direct mode'), 'popup must expose the maximum direct security posture');
+assert.ok(popupSource.includes('Independent controls'), 'popup must expose independent module controls');
 assert.ok(popupSource.includes('AEGIS-9'), 'popup must expose the AEGIS-9 system anonymity profile');
 for (const path of ['package.json','tsconfig.json','vite.config.ts','manifest.config.ts','src/shared/constants.ts','src/shared/types.ts','src/shared/storage.ts','src/shared/utils.ts','src/background/index.ts','src/background/ruleManager.ts','src/background/urlCleaner.ts','src/background/badgeManager.ts','src/content/content-isolated.ts','src/content/inject-main.iife.ts','src/popup/popup.html','src/popup/popup.ts','src/options/options.html','src/options/options.ts']) {
   assert.ok(fs.existsSync(path), 'typed architecture file missing: ' + path);
@@ -216,3 +222,8 @@ assert.ok(pkg.scripts?.build === 'vite build', 'build script must use Vite');
 assert.ok(pkg.scripts?.typecheck === 'tsc --noEmit', 'typecheck script must use TypeScript');
 assert.ok(pkg.devDependencies?.['@crxjs/vite-plugin'], 'CRXJS build dependency must exist');
 assert.ok(pkg.devDependencies?.vite, 'Vite build dependency must exist');
+
+assert.ok(popupSource.includes('data-key="trackers"'), 'popup must expose tracker toggle');
+assert.ok(popupSource.includes('data-key="ads"'), 'popup must expose ad toggle');
+assert.ok(popupSource.includes('data-key="urlCleaner"'), 'popup must expose URL cleaner toggle');
+assert.ok(popupSource.includes('data-key="browserPrivacy"'), 'popup must expose browser privacy toggle');
