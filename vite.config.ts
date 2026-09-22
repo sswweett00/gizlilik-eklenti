@@ -10,20 +10,7 @@ function copyExtensionAssets(): Plugin {
     generateBundle() {
       const root = process.cwd();
       const iconDir = path.join(root, 'icons');
-      const rulesDir = path.join(root, 'public', 'rules');
-      if (fs.existsSync(iconDir)) {
-        for (const file of fs.readdirSync(iconDir)) {
-          if (!file.endsWith('.png')) continue;
-          this.emitFile({ type: 'asset', fileName: 'icons/' + file, source: fs.readFileSync(path.join(iconDir, file)) });
-        }
-      }
-      if (fs.existsSync(rulesDir)) {
-        for (const file of fs.readdirSync(rulesDir)) {
-          if (!file.endsWith('.json')) continue;
-          this.emitFile({ type: 'asset', fileName: 'rules/' + file, source: fs.readFileSync(path.join(rulesDir, file), 'utf8') });
-        }
-      }
-    },
+          },
   };
 }
 
