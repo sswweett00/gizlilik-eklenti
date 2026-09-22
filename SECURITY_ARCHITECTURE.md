@@ -1,10 +1,10 @@
-# Privacy Shield 4.8 — Security Architecture
+# Privacy Shield 4.9 — Security Architecture
 
 ## Executive Summary
 
-Privacy Shield 4.8 is a Chromium-first privacy-hardening extension with two network-path postures: Direct Hardened and optional Local Tor. The Local Tor mode uses Chromium's proxy API to point the browser at a locally running Tor SOCKS5 endpoint; no paid VPN or remote proxy service is required.
+Privacy Shield 4.8 is a Chromium-first privacy-hardening extension with a single Tor-only network posture when the extension is active. The Local Tor mode uses Chromium's proxy API to point the browser at a locally running Tor SOCKS5 endpoint; no paid VPN or remote proxy service is required.
 
-Direct Hardened mode deliberately does not claim to hide the public source IP of a normal direct TCP/QUIC connection. Local Tor changes that network path by making Chromium use a local SOCKS5 Tor endpoint. If the endpoint is unavailable, Privacy Shield does not configure a direct fallback proxy.
+The extension never normalizes an active configuration to a direct network path. Local Tor changes the network path by making Chromium use a local SOCKS5 Tor endpoint. If the endpoint is unavailable, Privacy Shield keeps the kill-switch active and does not configure a direct fallback proxy.
 
 The achievable security goal is: reduce browser-side fingerprinting, block major alternate browser transport surfaces, minimize tracking/telemetry APIs, keep JavaScript and request identities coherent, enforce a maximum direct-privacy baseline, validate all settings, and report residual risk honestly.
 
@@ -53,7 +53,7 @@ Controlled settings are snapshotted in session storage and restored when protect
 
 ### Maximum direct mode
 
-The default `maximum_direct` posture enables the hardened baseline while still allowing the user to toggle individual modules. Geolocation is deny-by-default. Site exceptions do not disable page-world protections in maximum mode, and their DNR allow rules deliberately do not bypass the WebTransport or ping/beacon blocks. Chrome's WebRTC IP handling policy is also set to disable non-proxied UDP. Media-device enumeration is minimized.
+The `maximum_direct` browser-hardening baseline remains active, but the network path itself is mandatory Local Tor. Critical network/privacy modules cannot be disabled while the Tor-only posture is active. Geolocation is deny-by-default. Site exceptions do not disable page-world protections in maximum mode, and their DNR allow rules deliberately do not bypass the WebTransport or ping/beacon blocks. Chrome's WebRTC IP handling policy is also set to disable non-proxied UDP. Media-device enumeration is minimized.
 
 ### WebRTC
 
@@ -122,7 +122,7 @@ The extension is self-contained and has no remote authentication service. Its se
 
 ### Anonymity
 
-Direct Hardened mode is not network anonymity. Local Tor mode changes the source network path, so the destination is expected to observe the Tor exit rather than the local public IP. Residual risks include browser fingerprinting, account-based identification, application behaviors outside the proxied browser, Tor network correlation and future browser implementation changes.
+Website-visible IP anonymity is attempted only through the verified Local Tor network path. The extension remains fail-closed until the Tor exit is verified; it does not silently fall back to the public source IP. This is still browser-layer protection, not a guarantee against a compromised OS/browser or against Tor traffic correlation. Residual risks include browser fingerprinting, account-based identification, application behaviors outside the proxied browser, Tor network correlation and future browser implementation changes.
 
 ### Residual Risks
 
