@@ -31,7 +31,7 @@ Can potentially correlate traffic timing/volume across Tor entry and exit observ
 | Canvas | standardized browser behavior | Other fingerprint surfaces |
 | WebGL/WebGPU | browser hardening | Novel APIs/rendering side channels |
 | Fonts | standardized/restricted browser behavior | OS-level side channels |
-| Geolocation API | permission deny | IP-based inference |
+| Geolocation API | permission deny + third-party IP-geolocation API blocklist | Destination can still infer location from the direct public IP |
 | Cookies/storage | isolation and session hygiene | Deliberate login still identifies user |
 | MAC | Tails/OS randomization | Local network still sees the randomized address |
 | Downloads | isolate/open only inside privacy session | Malicious external apps can bypass browser protections |
