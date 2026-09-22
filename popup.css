@@ -606,3 +606,58 @@ input:focus-visible {
 .status-item-value {
   font-variant-numeric: tabular-nums;
 }
+
+
+/* ─── Network IP Lock ────────────────────────────────────────────── */
+.ip-lock-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ip-lock-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 11px;
+  margin-bottom: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.ip-lock-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.ip-lock-dot.locked {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.45);
+}
+
+.ip-lock-dot.protected {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.45);
+}
+
+.ip-lock-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ip-lock-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ip-lock-sub {
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
