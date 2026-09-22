@@ -511,9 +511,10 @@
     // WebGPU exposes adapter capabilities and limits that can become a high-
     // entropy hardware fingerprint. Maximum mode disables the page API.
     try {
-      if ('gpu' in Navigator.prototype) {
-        defProp(Navigator.prototype, 'gpu', { get: function () { return undefined; } });
-      }
+      defProp(Navigator.prototype, 'gpu', { get: function () { return undefined; } });
+      try {
+        defProp(navigator, 'gpu', { get: function () { return undefined; } });
+      } catch (_) {}
     } catch (_) {}
 
     if (window.WebTransport) {
