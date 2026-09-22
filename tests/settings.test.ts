@@ -23,6 +23,11 @@ describe('Privacy Shield settings', () => {
     expect(normalized.modules.network).toBe(true);
   });
 
+  it('rejects invalid timezones', () => {
+    expect(normalizeSettings({ timezone: 'Not/A/Timezone' }).timezone).toBe('auto');
+    expect(normalizeSettings({ timezone: 'Europe/Istanbul' }).timezone).toBe('Europe/Istanbul');
+  });
+
   it('normalizes and clamps custom geolocation settings', () => {
     const normalized = normalizeSettings({
       geolocationMode: 'custom',
