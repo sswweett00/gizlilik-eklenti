@@ -4,18 +4,26 @@ import manifest from './manifest.config';
 import fs from 'node:fs';
 import path from 'node:path';
 
-function copyExtensionAssets(): Plugin {
+function copyExtensionIcons(): Plugin {
   return {
-    name: 'copy-extension-assets',
+    name: 'copy-extension-icons',
     generateBundle() {
-      const root = process.cwd();
-      const iconDir = path.join(root, 'icons');
-          },
+      const iconDir = path.join(process.cwd(), 'icons');
+      if (!fs.existsSync(iconDir)) return;
+      for (const file of fs.readdirSync(iconDir)) {
+        if (!file.toLowerCase().endsWith('.png')) continue;
+        this.emitFile({
+          type: 'asset',
+          fileName: 'icons/' + file,
+          source: fs.readFileSync(path.join(iconDir, file)),
+        });
+      }
+    },
   };
 }
 
 export default defineConfig({
-  plugins: [crx({ manifest }), copyExtensionAssets()],
+  plugins: [crx({ manifest }), copyExtensionIcons()],
   build: {
     target: 'es2022',
     outDir: 'dist',
