@@ -116,7 +116,7 @@ assert.ok(
 
 
 assert.ok(backgroundSource.includes('chrome.proxy.settings.set'), 'background must configure the browser proxy in local Tor mode');
-assert.ok(backgroundSource.includes("mode: 'local_tor'"), 'background must support local Tor mode');
+assert.ok(backgroundSource.includes("networkPrivacy?.mode === 'local_tor'") || backgroundSource.includes("networkPrivacy.mode === 'local_tor'"), 'background must support local Tor mode');
 assert.ok(backgroundSource.includes("scheme: 'socks5'"), 'local Tor mode must use SOCKS5');
 assert.ok(backgroundSource.includes('127.0.0.1'), 'local Tor mode must target localhost only');
 assert.ok(!/fallbackProxy\s*:/.test(backgroundSource), 'local Tor mode must not configure a fallback proxy');
