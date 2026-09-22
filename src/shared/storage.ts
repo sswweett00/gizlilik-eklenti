@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   geolocationMode: 'deny',
   spoofedLocation: { latitude:40.7128, longitude:-74.0060, accuracy:15 },
   excludedDomains: [],
-  networkPrivacy: { mode: 'direct_hardened' },
+  networkPrivacy: { mode: 'direct_hardened', torPort: 9050 },
 };
 export function normalizeSettings(input: Partial<ExtensionSettings> | null | undefined): ExtensionSettings {
   const raw = (input ?? {}) as Partial<ExtensionSettings>;
@@ -38,7 +38,7 @@ export function normalizeSettings(input: Partial<ExtensionSettings> | null | und
         }
       : { ...DEFAULT_SETTINGS.spoofedLocation },
     excludedDomains:uniqueDomains(raw.excludedDomains),
-    networkPrivacy:{ mode:'direct_hardened' },
+    networkPrivacy:{ mode: raw.networkPrivacy?.mode === 'local_tor' ? 'local_tor' : 'direct_hardened', torPort: raw.networkPrivacy?.torPort === 9150 ? 9150 : 9050 },
   };
   return normalized;
 }
