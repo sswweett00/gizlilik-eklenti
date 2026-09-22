@@ -47,6 +47,7 @@ const DEFAULT_SETTINGS = {
   excludedDomains: [],
   networkPrivacy: {
     mode: 'direct_hardened',
+    torPort: 9050,
   },
 };
 
