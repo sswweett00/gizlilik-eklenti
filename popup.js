@@ -127,7 +127,7 @@ function renderNetworkPrivacyStatus(status) {
   if (ipLockTitle) ipLockTitle.textContent = 'Direct connection hardened';
   if (ipLockSub) {
     ipLockSub.textContent = mode.sourceIpVisibility === 'direct_connection_visible'
-      ? 'Browser leak surfaces are hardened, but the destination still sees the public IP of the direct connection.'
+      ? 'Geolocation is denied and common IP-location lookups are blocked, but the destination still sees the direct public IP and can geolocate it.'
       : 'Network privacy hardening is active.';
   }
 }
