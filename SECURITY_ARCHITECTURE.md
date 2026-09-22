@@ -1,0 +1,132 @@
+# Privacy Shield 3.0 — Security Architecture
+
+## Executive Summary
+
+Privacy Shield 3.0 is a self-contained Chromium privacy-hardening extension for direct network connections. It does not configure or depend on a proxy, VPN, or Tor.
+
+The system deliberately does not claim to hide the public source IP of a normal direct TCP/QUIC connection. A destination server necessarily receives the network source address of the connection that reaches it. Network-layer anonymity therefore remains outside the capability of a browser extension without an intermediary network path.
+
+The achievable security goal is: reduce browser-side fingerprinting, block major alternate browser transport surfaces, minimize tracking/telemetry APIs, keep JavaScript and request identities coherent, validate all settings, and report residual risk honestly.
+
+## Architecture
+
+### Components
+
+1. Main-world injector: inject.js. Runs at document_start and hardens WebRTC, WebTransport, Canvas, WebGL, Audio, DOM geometry, Navigator, Client Hints, Screen, Geolocation, Permissions, and Timezone APIs.
+2. Isolated bridge: bridge.js. Relays profiles and settings between the page world and extension service worker using a bridge-minted token.
+3. Background service worker: background.js. Owns Chrome privacy policies, DNR rules, per-tab identities, validation, site exceptions, rotation, tab lifecycle and status reporting.
+4. Declarative network rules: header_rules, tracker_rules and network_rules. The network ruleset blocks WebTransport.
+
+### Data Flow
+
+Navigation -> document_start injector -> bridge profile registration -> service worker -> per-tab DNR session identity -> subsequent requests.
+Settings change -> sync storage -> service worker validation -> privacy APIs/DNR update -> broadcast -> required tab reload.
+
+## Threat Model
+
+### In scope
+
+- First-party and third-party websites.
+- Tracking scripts and ad networks.
+- Fingerprinting libraries.
+- WebRTC and alternate browser transport probes.
+- Attempts to infer device properties from navigator, screen, GPU, audio, canvas, fonts and Client Hints.
+- Page JavaScript attempting to forge extension settings messages.
+
+### Out of scope or fundamentally constrained
+
+- The destination server seeing the public source IP of a direct connection.
+- ISP/local-network observation.
+- A compromised operating system, browser binary, kernel or privileged extension.
+- New browser bugs or future fingerprint surfaces outside the extension's control.
+- Identity correlation through user accounts, cookies or external identifiers that remain intentionally usable.
+
+## Implementation
+
+### Browser privacy policy
+
+The extension hardens WebRTC IP handling, network prediction, hyperlink auditing, referrers, third-party cookies, Topics, FLEDGE, ad measurement, search suggestions, alternate error pages, autofill and password-saving prompts where the Chrome privacy API exposes those controls. Safe Browsing is intentionally not disabled.
+
+Controlled settings are snapshotted in session storage and restored when protection is disabled during the active extension session.
+
+### WebRTC
+
+RTCPeerConnection is blocked in the page world while protection is active. Chrome's WebRTC IP handling policy is also set to disable non-proxied UDP. Media-device enumeration is minimized.
+
+### WebTransport
+
+WebTransport is blocked twice: at the page API boundary and with a DNR rule matching the webtransport resource type.
+
+### Fingerprint coherence
+
+Per-tab profiles correlate browser version, platform, GPU family, screen size and hardware capacity instead of independently randomizing every property.
+
+### Header coherence
+
+Static global User-Agent spoofing is avoided. Per-tab session rules are installed after profile registration so JavaScript and later network requests can advertise a consistent identity.
+
+The first navigation request is a documented limitation because a document_start script cannot retroactively modify the request that was sent before the script executed.
+
+### State and trust boundaries
+
+Page JavaScript is treated as hostile. Settings are schema-normalized, profile data is sanitized before network-rule construction, DNR mutations are serialized, and main-world settings updates require the bridge token.
+
+## Configuration Guidelines
+
+Recommended production posture:
+
+- Protection: ON
+- WebRTC: ON
+- Network Surfaces: ON
+- Canvas/WebGL/Audio/Fonts/DOM: ON
+- Navigator/Screen/Headers: ON
+- Permissions coherence: ON
+- Geolocation: deny unless required
+- Timezone: auto or deliberately selected
+- Tracker blocking: ON
+- Site exceptions: only where necessary
+
+Do not treat a spoofed browser profile as IP anonymization. It changes browser-observable attributes but cannot change the source IP of a direct network connection.
+
+## Security Analysis
+
+### Confidentiality
+
+Browser-side disclosure is reduced for device capabilities, GPU identity, display geometry, canvas output, audio characteristics, font geometry, locale/timezone, geolocation, permission state and high-entropy Client Hints.
+
+### Integrity
+
+Configuration is validated, rules have explicit priorities, concurrent DNR mutations are serialized, and untrusted page messages cannot directly authenticate as extension settings without the bridge token.
+
+### Availability
+
+High-compatibility APIs are preferred where possible. FontFaceSet.check is left native, canvas serialization uses a temporary surface, live AudioBuffers are not permanently modified, and unavailable browser settings are handled individually. WebRTC/WebTransport blocking intentionally trades some site functionality for stronger privacy.
+
+### Authentication
+
+The extension is self-contained and has no remote authentication service. Its security boundary is page JavaScript -> main-world injector -> isolated bridge -> service worker.
+
+### Anonymity
+
+Network anonymity is not achievable under the stated no-proxy/VPN/Tor constraint. Without an intermediary or equivalent network-path change, the destination can observe the public source IP of the direct connection.
+
+### Residual Risks
+
+- Browser implementation bugs.
+- New fingerprinting APIs in future Chrome versions.
+- Page-initiated preconnect or DNS behaviors that Chrome documents are not all disabled by the network prediction preference.
+- Conflicting extensions or enterprise policy.
+- OS/network compromise.
+- Account and login identifiers that are intentionally usable by the site.
+
+## Testing
+
+The repository contains static validation for manifest permissions, JavaScript syntax, DNR rule structure, proxy-surface removal, WebRTC hard blocking, WebTransport blocking, privacy-policy controls and the direct-IP disclosure UI.
+
+Recommended runtime validation matrix: Chrome stable/Beta/Chromium on Windows, Linux and macOS; WebRTC sites; WebTransport sites; fingerprinting test pages; geolocation/permission pages; heavy third-party tracking pages; and Incognito split mode.
+
+## Conclusion
+
+Privacy Shield 3.0 should be treated as a production-oriented direct-connection privacy hardener, not as an anonymous networking system.
+
+The correct security property is: maximum browser-side privacy, explicit residual-risk disclosure, strong local leak resistance, coherent tab identities, and no false promise that a browser extension can hide the public IP of a direct network connection without changing the network path.
