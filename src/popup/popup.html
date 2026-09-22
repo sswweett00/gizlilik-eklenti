@@ -328,7 +328,7 @@
         </div>
         <button class="site-btn site-btn--secondary" id="rotateIdentityBtn" type="button">Rotate identity</button>
       </div>
-      <p class="site-help">Excluded sites bypass privacy modifications and tracker blocking. Changes are applied on the next page load.</p>
+      <p class="site-help">Maximum mode does not apply site exceptions; legacy exclusion entries are ignored by the hardened network policy.</p>
     </div>
   </section>
 
@@ -362,9 +362,9 @@
   <!-- Footer -->
   <footer class="footer">
     <button class="btn-reset" id="resetBtn" title="Reset all settings to defaults">Reset Defaults</button>
-    <span class="footer-version">v3.0.0</span>
+    <a class="footer-version" href="../options/options.html">v4.5.0 · Options</a>
   </footer>
 
-  <script src="popup.js"></script>
+  <script type="module" src="./popup.ts"></script>
 </body>
 </html>
