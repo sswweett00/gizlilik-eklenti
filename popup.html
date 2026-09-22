@@ -39,22 +39,21 @@
     </div>
   </section>
 
-    <!-- Direct Network Privacy -->
+    <!-- Anonymous Network Path -->
   <section class="ip-lock-section">
     <h2 class="section-title">Direct Network Privacy</h2>
     <div class="ip-lock-banner">
       <span class="ip-lock-dot protected" id="ipLockDot"></span>
       <div class="ip-lock-info">
-        <span class="ip-lock-title" id="ipLockTitle">Direct connection hardened</span>
-        <span class="ip-lock-sub" id="ipLockSub">Browser-side location APIs are denied, common third-party IP-geolocation lookups are blocked, and network leak surfaces are hardened.</span>
+        <span class="ip-lock-title" id="ipLockTitle">Tor-only network path</span>
+        <span class="ip-lock-sub" id="ipLockSub">All browser web traffic is required to use a verified local Tor SOCKS5 path. Direct fallback is disabled.</span>
       </div>
     </div>
 
     <div class="preset-row">
       <label class="preset-label" for="networkModeSelect">Network path</label>
       <select id="networkModeSelect" class="preset-select">
-        <option value="direct_hardened">Direct hardened — no intermediary</option>
-        <option value="local_tor">Local Tor — fail-closed SOCKS5</option>
+        <option value="local_tor">Local Tor — mandatory fail-closed SOCKS5</option>
       </select>
     </div>
 
@@ -80,7 +79,7 @@
 
     <p class="site-help"><strong>Independent controls:</strong> every protection module below can be enabled or disabled separately. The master switch disables the entire extension policy.</p>
     <p class="site-help"><strong>Location boundary:</strong> the Geolocation API is blocked and common IP-location API lookups are denied, but a website can still derive approximate location from the public IP that receives the connection.</p>
-    <p class="site-help"><strong>Direct mode:</strong> the extension blocks browser-side IP discovery, WebRTC/STUN, IP-location services and related leak surfaces, but the destination still sees the source public IP.</p>
+    <p class="site-help"><strong>Anonymous-only mode:</strong> direct networking is not an available configuration while Privacy Shield is installed and active. If Tor is unavailable, web traffic remains blocked instead of exposing the source IP.</p>
     <p class="site-help"><strong>Local Tor mode:</strong> routes browser HTTP(S) traffic through <code>127.0.0.1</code> via SOCKS5 with no direct fallback. It is zero-cost when Tor is running locally; if Tor is unavailable, web requests fail closed instead of falling back to your normal public IP.</p>
     <p class="site-help"><strong>AEGIS-9:</strong> for zero-cost website-visible IP anonymity, use Qubes R4.3 + Whonix 18 with <code>anon-whonix → sys-whonix → Tor</code> and a Whonix disposable template. See the repository deployment guide.</p>
   </section>
