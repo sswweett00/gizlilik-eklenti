@@ -46,11 +46,13 @@
         "ipapi.co"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -65,11 +67,13 @@
         "ipinfo.io"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -84,11 +88,13 @@
         "ipwho.is"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -103,11 +109,13 @@
         "ip-api.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -122,11 +130,13 @@
         "ipgeolocation.io"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -141,11 +151,13 @@
         "ipdata.co"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -160,11 +172,13 @@
         "freeipapi.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -179,11 +193,13 @@
         "geolocation-db.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -198,11 +214,13 @@
         "ipapi.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -217,11 +235,13 @@
         "ip2location.io"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
-        "ping"
+        "ping",
+        "webtransport"
       ]
     }
   },
@@ -236,12 +256,14 @@
         "api.ipify.org"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -256,12 +278,14 @@
         "api64.ipify.org"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -276,12 +300,14 @@
         "ipify.org"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -296,12 +322,14 @@
         "ifconfig.co"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -316,12 +344,14 @@
         "ifconfig.me"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -336,12 +366,14 @@
         "icanhazip.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -356,12 +388,14 @@
         "ident.me"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -376,12 +410,14 @@
         "ip.sb"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -396,12 +432,14 @@
         "myip.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -416,12 +454,14 @@
         "checkip.amazonaws.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -436,12 +476,14 @@
         "checkip.dyndns.org"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -456,12 +498,14 @@
         "whatismyip.akamai.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -476,12 +520,14 @@
         "ipv4.icanhazip.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -496,12 +542,14 @@
         "ipv6.icanhazip.com"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -516,12 +564,14 @@
         "api.my-ip.io"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -536,12 +586,14 @@
         "seeip.org"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   },
@@ -556,12 +608,14 @@
         "ip.seeip.org"
       ],
       "resourceTypes": [
+        "main_frame",
         "xmlhttprequest",
         "script",
         "sub_frame",
         "image",
         "ping",
-        "other"
+        "other",
+        "webtransport"
       ]
     }
   }
