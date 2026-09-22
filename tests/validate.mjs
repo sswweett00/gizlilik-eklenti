@@ -124,6 +124,7 @@ assert.ok(backgroundSource.includes('TOR_KILL_SWITCH_RULE_ID'), 'local Tor mode 
 assert.ok(backgroundSource.includes('incognito_persistent'), 'Local Tor must cover the incognito proxy scope');
 assert.ok(backgroundSource.includes('isAllowedIncognitoAccess'), 'Local Tor must detect incognito access availability');
 assert.ok(backgroundSource.includes("regexFilter: '^(https?|wss?):'"), 'Tor kill-switch must block direct HTTP(S)/WebSocket traffic');
+assert.ok(backgroundSource.includes('TOR_KILL_SWITCH_RESOURCE_TYPES'), 'Tor kill-switch must explicitly include main-frame and all web resource types');
 assert.ok(backgroundSource.includes("levelOfControl !== 'controlled_by_this_extension'"), 'Tor verification must require extension-owned proxy control');
 assert.ok(backgroundSource.includes('Object.keys(rules).every((key) => key === \'singleProxy\')'), 'Tor proxy detection must reject alternate proxy fields');
 assert.ok(popupSource.includes('Allow this extension in Incognito'), 'popup must disclose the incognito coverage prerequisite');
@@ -256,6 +257,7 @@ assert.ok(read('scripts/macos/privacy-audit.sh').includes('networksetup -listall
 
 assert.ok(networkRules.some((rule) => rule.condition?.urlFilter === '||httpbin.org/ip'), 'httpbin IP echo must be blocked');
 assert.ok(networkRules.some((rule) => rule.condition?.urlFilter === '||cloudflare.com/cdn-cgi/trace'), 'Cloudflare trace IP endpoint must be blocked');
+assert.ok(networkRules.filter((rule) => rule.id >= 303).every((rule) => rule.condition?.resourceTypes?.includes('main_frame') && rule.condition?.resourceTypes?.includes('webbundle')), 'IP discovery blocks must cover all current DNR resource types');
 assert.ok(networkRules.some((rule) => rule.id === 334 && rule.condition?.requestDomains?.includes('eth0.me')), 'additional IP echo services must be blocked');
 
 for (const name of ['rules','permissions','network','trackers','adblock','url-cleaner']) {
