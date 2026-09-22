@@ -39,6 +39,49 @@
     </div>
   </section>
 
+  <!-- IP Lock -->
+  <section class="ip-lock-section">
+    <h2 class="section-title">Network IP Lock</h2>
+    <div class="ip-lock-banner" id="ipLockBanner">
+      <span class="ip-lock-dot" id="ipLockDot"></span>
+      <div class="ip-lock-info">
+        <span class="ip-lock-title" id="ipLockTitle">Strict / fail-closed</span>
+        <span class="ip-lock-sub" id="ipLockSub">Direct site connections are blocked until a proxy is configured.</span>
+      </div>
+    </div>
+
+    <div class="preset-row">
+      <label class="preset-label" for="ipProtectionMode">Mode</label>
+      <select id="ipProtectionMode" class="preset-select">
+        <option value="proxy_required">Strict — proxy required</option>
+        <option value="browser_only">Browser protections only</option>
+      </select>
+    </div>
+
+    <div class="preset-row">
+      <label class="preset-label" for="proxyScheme">Proxy</label>
+      <select id="proxyScheme" class="preset-select">
+        <option value="socks5">SOCKS5</option>
+        <option value="https">HTTPS</option>
+        <option value="http">HTTP</option>
+        <option value="socks4">SOCKS4</option>
+      </select>
+    </div>
+
+    <div class="coord-row">
+      <div class="coord-field">
+        <label class="coord-label" for="proxyHost">Proxy host</label>
+        <input type="text" id="proxyHost" class="coord-input" autocomplete="off" spellcheck="false" placeholder="127.0.0.1 or proxy.example" />
+      </div>
+      <div class="coord-field">
+        <label class="coord-label" for="proxyPort">Port</label>
+        <input type="number" id="proxyPort" class="coord-input" min="1" max="65535" step="1" value="1080" />
+      </div>
+    </div>
+
+    <p class="site-help">Use a proxy whose exit IP should be visible to websites. With strict mode, Privacy Shield never intentionally falls back to DIRECT when the proxy is missing or unavailable.</p>
+  </section>
+
   <!-- Module Toggles -->
   <section class="modules-section">
     <h2 class="section-title">Protection Modules</h2>
@@ -318,7 +361,7 @@
   <!-- Footer -->
   <footer class="footer">
     <button class="btn-reset" id="resetBtn" title="Reset all settings to defaults">Reset Defaults</button>
-    <span class="footer-version">v2.2.0</span>
+    <span class="footer-version">v2.3.0</span>
   </footer>
 
   <script src="popup.js"></script>
