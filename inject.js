@@ -632,6 +632,42 @@
       } catch (_) {}
     }
 
+    if (navigator.keyboard && typeof navigator.keyboard.getLayoutMap === 'function') {
+      try {
+        defProp(Keyboard.prototype, 'getLayoutMap', {
+          value: markNative(function getLayoutMap() { return rejectAccess('Keyboard layout'); }, 'getLayoutMap'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getSupportedConstraints === 'function') {
+      try {
+        defProp(MediaDevices.prototype, 'getSupportedConstraints', {
+          value: markNative(function getSupportedConstraints() { return {}; }, 'getSupportedConstraints'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+
+    if (navigator.mediaCapabilities) {
+      for (const name of ['decodingInfo', 'encodingInfo']) {
+        if (typeof navigator.mediaCapabilities[name] !== 'function') continue;
+        try {
+          defProp(MediaCapabilities.prototype, name, {
+            value: markNative(function () { return rejectAccess('Media capabilities'); }, name),
+            writable: true,
+          });
+        } catch (_) {}
+      }
+    }
+
+    if (navigator.xr) {
+      try {
+        defProp(Navigator.prototype, 'xr', { get: function () { return undefined; } });
+      } catch (_) {}
+    }
+
     if (typeof navigator.getGamepads === 'function') {
       try {
         defProp(Navigator.prototype, 'getGamepads', {
@@ -1097,14 +1133,24 @@
     }
     Object.defineProperty(navigator.permissions, 'query', {
       value: markNative(function query(descriptor) {
-        if (descriptor && descriptor.name === 'geolocation' && on('geolocation')) {
-          return Promise.resolve(makePermissionStatus(_prefs.geolocationMode === 'deny' ? 'denied' : 'granted'));
+        if (descriptor && ['geolocation', 'camera', 'microphone', 'notifications', 'push', 'midi'].includes(descriptor.name) && on('permissions')) {
+          return Promise.resolve(makePermissionStatus('denied'));
         }
         return _permissionQuery(descriptor);
       }, 'query'),
       writable: true, configurable: true,
     });
   }
+  if (on('permissions') && typeof window.Notification === 'function') {
+    try {
+      defProp(Notification, 'permission', { get: function () { return 'denied'; } });
+      defProp(Notification, 'requestPermission', {
+        value: markNative(function requestPermission() { return Promise.resolve('denied'); }, 'requestPermission'),
+        writable: true,
+      });
+    } catch (_) {}
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // MODULE 10: CLIENT HINTS COHERENCE
   // ═══════════════════════════════════════════════════════════════════════════
