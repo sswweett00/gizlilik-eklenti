@@ -12,7 +12,7 @@ const urlRules = JSON.parse(read('rules/url-cleaner.json'));
 const permissionRules = JSON.parse(read('rules/permissions.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.6.0');
+assert.equal(manifest.version, '4.7.0');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'declarativeNetRequestFeedback', 'storage', 'tabs', 'contentSettings']
