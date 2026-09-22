@@ -61,7 +61,8 @@ function buildModuleCards():void{
 
 function render(s:ExtensionSettings):void{
   settings=s;
-  master.checked=s.enabled;
+  master.checked=true;
+  master.disabled=true;
   const keys=Object.keys(moduleMeta) as Array<keyof ExtensionModules>;
   const active=keys.filter(k=>s.modules[k]).length;
   moduleCount.textContent=`${active}/${keys.length} active`;
@@ -110,7 +111,7 @@ function renderDomains(s:ExtensionSettings):void{
   }
 }
 
-master.addEventListener('change',async()=>{settings=await saveSettings({enabled:master.checked});render(settings);});
+master.addEventListener('change',async()=>{master.checked=true;settings=await saveSettings({enabled:true});render(settings);});
 enableAll.addEventListener('click',async()=>{const modules={...settings.modules};(Object.keys(moduleMeta) as Array<keyof ExtensionModules>).forEach(k=>modules[k]=true);settings=await saveSettings({modules});render(settings);});
 disableAll.addEventListener('click',async()=>{const modules={...settings.modules};(Object.keys(moduleMeta) as Array<keyof ExtensionModules>).forEach(k=>modules[k]=false);settings=await saveSettings({modules});render(settings);});
 search.addEventListener('input',()=>render(settings));
