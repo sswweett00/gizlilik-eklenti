@@ -335,6 +335,12 @@
     timezone: 'auto',        // 'auto' = per-tab timezone
     spoofedLocation: null,   // { latitude, longitude } used by 'custom' mode
     excludedDomains: [],
+    ipProtection: {
+      mode: 'proxy_required',
+      scheme: 'socks5',
+      host: '',
+      port: 1080,
+    },
   };
 
   let _modules = { ...MODULE_DEFAULTS };
@@ -445,39 +451,50 @@
     const _OrigPC = window.RTCPeerConnection;
 
     if (_OrigPC) {
-      function sanitizeConfig(cfg) {
-        if (!cfg) return { iceServers: [], iceTransportPolicy: 'relay' };
-        return { ...cfg, iceServers: [], iceTransportPolicy: 'relay' };
-      }
+      const strictIpLock = _prefs.ipProtection?.mode === 'proxy_required';
 
-      const SafePC = function RTCPeerConnection(config, constraints) {
-        return new _OrigPC(sanitizeConfig(config), constraints);
-      };
-      SafePC.prototype = _OrigPC.prototype;
-      if (_OrigPC.generateCertificate) {
-        SafePC.generateCertificate = markNative(
-          _OrigPC.generateCertificate.bind(_OrigPC), 'generateCertificate'
-        );
+      if (strictIpLock) {
+        const BlockedPC = function RTCPeerConnection() {
+          throw new DOMException('WebRTC disabled by Privacy Shield IP Lock.', 'NotAllowedError');
+        };
+        BlockedPC.prototype = _OrigPC.prototype;
+        markNative(BlockedPC, 'RTCPeerConnection');
+        window.RTCPeerConnection = BlockedPC;
+        window.webkitRTCPeerConnection = BlockedPC;
+        window.mozRTCPeerConnection = BlockedPC;
+      } else {
+        function sanitizeConfig(cfg) {
+          if (!cfg) return { iceServers: [], iceTransportPolicy: 'relay' };
+          return { ...cfg, iceServers: [], iceTransportPolicy: 'relay' };
+        }
+
+        const SafePC = function RTCPeerConnection(config, constraints) {
+          return new _OrigPC(sanitizeConfig(config), constraints);
+        };
+        SafePC.prototype = _OrigPC.prototype;
+        if (_OrigPC.generateCertificate) {
+          SafePC.generateCertificate = markNative(
+            _OrigPC.generateCertificate.bind(_OrigPC), 'generateCertificate'
+          );
+        }
+        markNative(SafePC, 'RTCPeerConnection');
+        window.RTCPeerConnection = SafePC;
+        window.webkitRTCPeerConnection = SafePC;
+        window.mozRTCPeerConnection = SafePC;
       }
-      markNative(SafePC, 'RTCPeerConnection');
-      window.RTCPeerConnection = SafePC;
-      window.webkitRTCPeerConnection = SafePC;
-      window.mozRTCPeerConnection    = SafePC;
     }
 
     // Sanitize SDP to strip host candidates (which leak local IPs)
     function sanitizeSDP(desc) {
       if (!desc || !desc.sdp) return desc;
       const clean = desc.sdp
-        .split('\n')
+        .split('\\n')
         .filter((l) => !(l.includes('a=candidate') && l.includes('typ host')))
-        .join('\n');
+        .join('\\n');
       return new RTCSessionDescription({ type: desc.type, sdp: clean });
     }
 
-    if (window.RTCPeerConnection) {
-      // NOTE: must be regular functions — arrow functions lose `this` and
-      // would invoke the native method with a wrong receiver.
+    if (window.RTCPeerConnection && _prefs.ipProtection?.mode !== 'proxy_required') {
       overrideMethod(RTCPeerConnection.prototype, 'createOffer', function (orig, args) {
         return orig.apply(this, args).then(sanitizeSDP);
       });
@@ -490,7 +507,6 @@
       });
     }
 
-    // Block hardware enumeration
     if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
       Object.defineProperty(navigator.mediaDevices, 'enumerateDevices', {
         value: markNative(() => Promise.resolve([]), 'enumerateDevices'),
@@ -498,7 +514,6 @@
       });
     }
   }
-
   // ═══════════════════════════════════════════════════════════════════════════
   // MODULE 2: CANVAS NOISE (per-tab seeded PRNG)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1170,6 +1185,14 @@
       }
       if (Array.isArray(s.excludedDomains)) {
         _prefs.excludedDomains = s.excludedDomains.filter(function (domain) { return typeof domain === 'string'; }).map(function (domain) { return domain.toLowerCase(); }).slice(0, 100);
+      }
+      if (s.ipProtection && typeof s.ipProtection === 'object') {
+        _prefs.ipProtection = {
+          mode: s.ipProtection.mode === 'browser_only' ? 'browser_only' : 'proxy_required',
+          scheme: typeof s.ipProtection.scheme === 'string' ? s.ipProtection.scheme : 'socks5',
+          host: typeof s.ipProtection.host === 'string' ? s.ipProtection.host : '',
+          port: Number(s.ipProtection.port) || 1080,
+        };
       }
       persistCfg();
     } catch (_) {}
