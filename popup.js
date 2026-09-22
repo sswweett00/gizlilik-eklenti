@@ -125,7 +125,7 @@ function renderUI(settings) {
 
   if (networkModeSelect) {
     networkModeSelect.value = settings.networkPrivacy?.mode || 'direct_hardened';
-    networkModeSelect.disabled = !settings.enabled;
+    networkModeSelect.disabled = true;
   }
   if (torPortSelect) {
     torPortSelect.value = String(settings.networkPrivacy?.torPort || 9050);
@@ -162,7 +162,7 @@ function renderNetworkPrivacyStatus(status) {
   if (networkVisibilityValue) {
     networkVisibilityValue.textContent = torActive
       ? 'Expected hidden behind Tor'
-      : 'Visible to destination';
+      : 'Blocked until Tor is verified';
   }
 
   if (!mode.enabled) {
@@ -193,15 +193,13 @@ function renderNetworkPrivacyStatus(status) {
     return;
   }
 
-  const active = !!mode.networkModuleEnabled || !!mode.webrtcModuleEnabled || !!mode.browserPrivacyModuleEnabled;
-  if (ipLockDot) ipLockDot.className = active ? 'ip-lock-dot protected' : 'ip-lock-dot';
-  if (ipLockTitle) ipLockTitle.textContent = active ? 'Direct connection hardened' : 'Network hardening disabled';
+  const active = !!mode.proxyActive && !!mode.torVerified;
+  if (ipLockDot) ipLockDot.className = active ? 'ip-lock-dot protected' : 'ip-lock-dot inactive';
+  if (ipLockTitle) ipLockTitle.textContent = active ? 'Verified Tor egress' : 'Tor egress blocked until verified';
   if (ipLockSub) {
-    if (!active) {
-      ipLockSub.textContent = 'Network, WebRTC and browser-level privacy modules are disabled.';
-    } else {
-      ipLockSub.textContent = 'Browser-side IP discovery and network leak surfaces are hardened, but a direct connection still exposes the public source IP.';
-    }
+    ipLockSub.textContent = active
+      ? 'Verified local Tor egress is active. Direct fallback is disabled.'
+      : 'The browser remains fail-closed until the local Tor SOCKS5 path is configured and verified.';
   }
 }
 
@@ -362,7 +360,7 @@ rotateIdentityBtn?.addEventListener('click', async () => {
 
 networkModeSelect?.addEventListener('change', () => {
   if (!currentSettings) return;
-  const mode = networkModeSelect.value === 'local_tor' ? 'local_tor' : 'direct_hardened';
+  const mode = 'local_tor';
   currentSettings.networkPrivacy = {
     mode,
     torPort: Number(torPortSelect?.value) === 9150 ? 9150 : 9050,
@@ -374,7 +372,7 @@ networkModeSelect?.addEventListener('change', () => {
 torPortSelect?.addEventListener('change', () => {
   if (!currentSettings) return;
   currentSettings.networkPrivacy = {
-    mode: currentSettings.networkPrivacy?.mode === 'local_tor' ? 'local_tor' : 'direct_hardened',
+    mode: 'local_tor',
     torPort: Number(torPortSelect.value) === 9150 ? 9150 : 9050,
   };
   scheduleSave();
@@ -406,7 +404,8 @@ verifyTorBtn?.addEventListener('click', async () => {
 // Master toggle
 masterToggle.addEventListener('change', () => {
   if (!currentSettings) return;
-  currentSettings.enabled = masterToggle.checked;
+  masterToggle.checked = true;
+  currentSettings.enabled = true;
   updateGlobalStatusIndicator(currentSettings.enabled, currentSettings.modules);
   updateActiveModulesCount(currentSettings);
   document.body.classList.toggle('shield-disabled', !currentSettings.enabled);
