@@ -339,6 +339,7 @@
     webrtc: true, canvas: true, webgl: true, audio: true,
     fonts: true, navigator: true, screen: true, geolocation: true,
     timezone: true, permissions: true, network: true,
+    trackers: true, ads: true, urlCleaner: true, browserPrivacy: true,
   };
 
   // Non-flag preferences pushed from the background via bridge.js.
@@ -934,10 +935,23 @@
       });
     }
 
+    function patchDebugRendererSurface(proto) {
+      overrideMethod(proto, 'getSupportedExtensions', function (orig, args) {
+        const extensions = orig.apply(this, args);
+        return Array.isArray(extensions)
+          ? extensions.filter((name) => name !== 'WEBGL_debug_renderer_info')
+          : extensions;
+      });
+      overrideMethod(proto, 'getExtension', function (orig, [name]) {
+        return name === 'WEBGL_debug_renderer_info' ? null : orig.call(this, name);
+      });
+    }
+
     for (const C of [window.WebGLRenderingContext, window.WebGL2RenderingContext]) {
       if (C) {
         patchGetParameter(C.prototype);
         patchReadPixels(C.prototype);
+        patchDebugRendererSurface(C.prototype);
       }
     }
   }
