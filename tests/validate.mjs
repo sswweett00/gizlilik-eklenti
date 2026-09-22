@@ -123,7 +123,9 @@ assert.ok(!/fallbackProxy\s*:/.test(backgroundSource), 'local Tor mode must not 
 assert.ok(backgroundSource.includes('TOR_KILL_SWITCH_RULE_ID'), 'local Tor mode must define a network kill-switch');
 assert.ok(backgroundSource.includes('incognito_persistent'), 'Local Tor must cover the incognito proxy scope');
 assert.ok(backgroundSource.includes('isAllowedIncognitoAccess'), 'Local Tor must detect incognito access availability');
-assert.ok(backgroundSource.includes("regexFilter: '^https?://'"), 'Tor kill-switch must block direct HTTP(S) traffic');
+assert.ok(backgroundSource.includes("regexFilter: '^(https?|wss?):'"), 'Tor kill-switch must block direct HTTP(S)/WebSocket traffic');
+assert.ok(backgroundSource.includes("levelOfControl !== 'controlled_by_this_extension'"), 'Tor verification must require extension-owned proxy control');
+assert.ok(backgroundSource.includes('Object.keys(rules).every((key) => key === \'singleProxy\')'), 'Tor proxy detection must reject alternate proxy fields');
 assert.ok(popupSource.includes('Allow this extension in Incognito'), 'popup must disclose the incognito coverage prerequisite');
 assert.ok(backgroundSource.includes('setTorKillSwitch(true)'), 'Tor failures must activate the kill-switch');
 assert.ok(popupSource.includes('Verify Tor'), 'popup must expose Tor verification');
