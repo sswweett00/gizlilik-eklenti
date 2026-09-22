@@ -238,14 +238,14 @@
     // the first navigation request and Chromium Client Hints are emitted
     // before this page-world script can register a per-tab profile.
     const actualUA = String(navigator.userAgent || '');
-    const actualAppVersion = String(navigator.appVersion || actualUA.replace(/^Mozilla\\//, ''));
+    const actualAppVersion = String(navigator.appVersion || actualUA.replace(/^Mozilla\//, ''));
     const actualPlatform = String(navigator.platform || '');
     const actualVendor = String(navigator.vendor || '');
     const actualVendorSub = String(navigator.vendorSub || '');
     const actualProduct = String(navigator.product || 'Gecko');
     const actualProductSub = String(navigator.productSub || '');
     const actualUAData = navigator.userAgentData;
-    const uaMajor = (actualUA.match(/(?:Chrome|Chromium|Edg|Firefox)\\/(\\d+)/) || [null, '0'])[1];
+    const uaMajor = (actualUA.match(/(?:Chrome|Chromium|Edg|Firefox)\/(\d+)/) || [null, '0'])[1];
     const actualBrands = actualUAData && Array.isArray(actualUAData.brands)
       ? actualUAData.brands.map((b) => ({ brand: String(b.brand), version: String(b.version) }))
       : [];
