@@ -47,6 +47,9 @@ assert.ok(headerRules[0].action.requestHeaders.some((h) => h.header === 'Referer
 assert.ok(headerSource.includes('en-US,en;q=0.9'), 'Accept-Language must use the standardized locale profile');
 
 const background = read('background.js');
+const backgroundSource = background;
+const injectSource = read('inject.js');
+const popupSource = read('popup.html') + '\n' + read('popup.js');
 assert.ok(background.includes('function enqueue('), 'background must define enqueue before use');
 assert.ok(background.includes('await enqueue(() => rebuildAllSessionRules());'), 'background must serialize session-rule rebuilds');
 for (const marker of [
@@ -101,9 +104,7 @@ assert.ok(
   'WebSocket must be blocked in hardened network mode'
 );
 
-const backgroundSource = read('background.js');
-const injectSource = read('inject.js');
-const popupSource = read('popup.html') + '\n' + read('popup.js');
+
 
 for (const forbidden of ['chrome.proxy', 'proxy_required', 'ipProtection', 'proxyHost', 'proxyPort', 'proxyScheme']) {
   assert.ok(!backgroundSource.includes(forbidden), 'background contains removed proxy surface: ' + forbidden);
