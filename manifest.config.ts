@@ -77,4 +77,4 @@ const manifest = {
   },
 };
 
-export default defineManifest(manifest);
+export default defineManifest(manifest as any);
