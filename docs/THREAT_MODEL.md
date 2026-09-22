@@ -24,14 +24,14 @@ Can potentially correlate traffic timing/volume across Tor entry and exit observ
 
 | Surface | Primary defense | Residual risk |
 | --- | --- | --- |
-| Public IP | Tor / Tor Browser | Tor entry sees the user connection; global correlation remains possible |
+| Public IP | Local Tor / Tor Browser | Local Tor changes the browser egress, but the local machine still connects to the Tor entry; global correlation remains possible |
 | DNS | Tor Browser / Tails | Other applications can still leak |
 | WebRTC | Tor Browser + Privacy Shield | Future browser changes |
 | WebTransport | DNR + page API block | Future transport APIs |
 | Canvas | standardized browser behavior | Other fingerprint surfaces |
 | WebGL/WebGPU | browser hardening | Novel APIs/rendering side channels |
 | Fonts | standardized/restricted browser behavior | OS-level side channels |
-| Geolocation API | permission deny + third-party IP-geolocation API blocklist | Destination can still infer location from the direct public IP |
+| Geolocation API | permission deny + IP-geolocation blocks + Tor-only egress | IP-derived location is based on the Tor exit when the Tor path is verified |
 | Cookies/storage | isolation and session hygiene | Deliberate login still identifies user |
 | MAC | Tails/OS randomization | Local network still sees the randomized address |
 | Downloads | isolate/open only inside privacy session | Malicious external apps can bypass browser protections |
