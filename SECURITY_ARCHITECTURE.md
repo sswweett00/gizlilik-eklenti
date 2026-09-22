@@ -14,7 +14,7 @@ The achievable security goal is: reduce browser-side fingerprinting, block major
 
 1. Main-world injector: inject.js. Runs at document_start and hardens WebRTC, WebTransport, Canvas, WebGL, Audio, DOM geometry, Navigator, Client Hints, Screen, Geolocation, Permissions, and Timezone APIs.
 2. Isolated bridge: bridge.js. Relays profiles and settings between the page world and extension service worker using cryptographically signed settings updates from an isolated-world signing key. The main-world verifier still shares the page JavaScript environment, so the browser's MAIN/ISOLATED trust boundary remains a platform limitation rather than a substitute for a native isolated execution boundary.
-3. Background service worker: background.js. Owns Chrome privacy policies, DNR rules, per-tab identities, validation, site exceptions, rotation, tab lifecycle and status reporting.
+3. Background service worker: background.js. Owns browser privacy policies, static/dynamic DNR state, sanitized per-tab profile bookkeeping, validation, site exceptions, rotation, tab lifecycle and status reporting.
 4. Declarative network rules: header_rules, permission_rules, tracker_rules, ad_rules, network_rules and url_rules. The permission ruleset adds a browser-enforced Permissions-Policy response layer.
 5. Zero-cost deployment assets: OS audit tools and deployment guidance for Windows, Linux, macOS, native Tails, Tor and Tor Browser. Tor/Tails are intentionally external system components; the extension never attempts to impersonate or reimplement them.
 
@@ -68,9 +68,7 @@ Per-tab profiles correlate browser version, platform, GPU family, screen size an
 
 ### Header coherence
 
-Static global User-Agent spoofing is avoided. Per-tab session rules are installed after profile registration so JavaScript and later network requests can advertise a consistent identity.
-
-The first navigation request is intentionally left native. The project no longer attempts to rewrite it because a document_start script cannot retroactively modify that request, and cross-platform spoofing can create a detectable split identity.
+Static global User-Agent spoofing is avoided. Per-tab profile data is retained only for status/coherence bookkeeping; request headers remain native so the first navigation and subsequent Chromium-generated Client Hints cannot be split by cross-platform spoofing.
 
 ### Identity entropy
 
@@ -78,7 +76,7 @@ Per-tab profile bookkeeping prefers `crypto.getRandomValues()` at `document_star
 
 ### State and trust boundaries
 
-Page JavaScript is treated as hostile. Settings are schema-normalized, profile data is sanitized before network-rule construction, DNR mutations are serialized, and main-world settings updates require the bridge token.
+Page JavaScript is treated as hostile. Settings are schema-normalized, profile data is sanitized before network-rule construction, DNR mutations are serialized, and main-world settings updates use signed messages plus monotonic sequence checks.
 
 ## System-Level Anonymity Architecture
 
@@ -111,7 +109,7 @@ Browser-side disclosure is reduced for device capabilities, GPU identity, displa
 
 ### Integrity
 
-Configuration is validated, rules have explicit priorities, concurrent DNR mutations are serialized, and untrusted page messages cannot directly authenticate as extension settings without the bridge token.
+Configuration is validated, rules have explicit priorities, concurrent DNR mutations are serialized, and untrusted page messages cannot directly replace extension settings without a valid bridge signature.
 
 ### Availability
 
