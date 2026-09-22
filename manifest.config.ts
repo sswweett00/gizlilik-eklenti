@@ -58,6 +58,9 @@ const manifest = {
       { id: 'url_rules', enabled: true, path: 'rules/url-cleaner.json' },
     ],
   },
+  content_security_policy: {
+    extension_pages: "script-src 'self'; object-src 'self';",
+  },
   icons: {
     '16': 'icons/icon16.png',
     '48': 'icons/icon48.png',
