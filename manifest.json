@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Privacy Shield",
-  "version": "4.3.2",
-  "description": "AEGIS-9 browser privacy hardening companion: maximum direct Chromium privacy, geolocation hard-blocking, third-party IP-geolocation request blocking, and zero-cost Qubes-Whonix/Tor deployment guidance. No proxy/VPN/Tor dependency inside the extension.",
+  "version": "4.4.0",
+  "description": "AEGIS-9 browser privacy hardening companion: maximum direct Chromium privacy with location, device, sensor, storage, permission and tracker-channel hardening, plus zero-cost Qubes-Whonix/Tor deployment guidance. No proxy/VPN/Tor dependency inside the extension.",
   "minimum_chrome_version": "128",
   "permissions": [
     "privacy",
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
     "storage",
-    "tabs"
+    "tabs",
+    "contentSettings"
   ],
   "host_permissions": [
     "<all_urls>"
