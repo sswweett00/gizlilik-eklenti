@@ -68,12 +68,10 @@ The repository contains:
 
 The GitHub connector exposed no workflow run/status result for the commits in this repository, so the changes are committed to `main` but the CI result could not be independently observed from the available GitHub status endpoint.
 
-## Strict IP privacy
+## Direct-Connection Privacy
 
-The extension now has a fail-closed network mode. In Strict — proxy required mode, a configured proxy is applied to HTTP, HTTPS and fallback traffic with no DIRECT fallback. When no usable proxy host is configured, Privacy Shield installs a mandatory PAC that points to a local discard endpoint so normal site requests fail instead of going directly over the user's connection.
+Privacy Shield does not use a proxy, VPN or Tor. It hardens browser-side privacy and blocks WebRTC/WebTransport leak surfaces, but a normal direct TCP/QUIC connection still exposes its source public IP to the destination server. No browser extension can change that network-layer fact without changing the network path.
 
-This is the only honest way for the extension to provide a hard sites-must-not-see-my-network-exit-IP guarantee without pretending that JavaScript can hide the source IP of an ordinary direct TCP/TLS connection. The visible IP to a website is the proxy/VPN/Tor exit IP, not the user's local public IP, when the proxy is actually in use. Chrome's proxy API supports fixed server configurations, and Chromium documents that proxy fallback only occurs when an alternate proxy such as DIRECT is provided; this project does not configure such a fallback. citeturn259202search1turn304143search0
+Chrome's privacy API exposes the WebRTC IP handling policy and other browser privacy settings, while Declarative Net Request can block and modify supported network requests, including the WebTransport resource type. citeturn126478search0turn126478search1
 
-When strict mode is active, WebRTC is also disabled at the page API boundary in addition to the browser WebRTC IP handling policy, reducing another class of direct address exposure.
-
-Important: the extension cannot turn a direct internet connection into an anonymous one. A website can always observe the IP address of the network connection that actually reaches it. To keep your real public IP away from sites, you need a working proxy, VPN, or Tor exit path; strict mode makes the extension fail closed instead of silently using the direct connection.
+See SECURITY_ARCHITECTURE.md for the full threat model, data flow, residual risks and production guidance.
