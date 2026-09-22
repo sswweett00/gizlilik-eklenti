@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Privacy Shield",
-  "version": "4.4.0",
-  "description": "AEGIS-9 browser privacy hardening companion: maximum direct Chromium privacy with location, device, sensor, storage, permission and tracker-channel hardening, plus zero-cost Qubes-Whonix/Tor deployment guidance. No proxy/VPN/Tor dependency inside the extension.",
+  "version": "4.5.0",
+  "description": "AEGIS-9 browser privacy hardening companion with tracker blocking, URL tracking cleanup, fingerprint hardening and browser-level privacy controls.",
   "minimum_chrome_version": "128",
   "permissions": [
     "privacy",
@@ -10,7 +10,8 @@
     "declarativeNetRequestWithHostAccess",
     "storage",
     "tabs",
-    "contentSettings"
+    "contentSettings",
+    "declarativeNetRequestFeedback"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -67,9 +68,19 @@
         "path": "rules/trackers.json"
       },
       {
+        "id": "ad_rules",
+        "enabled": true,
+        "path": "rules/adblock.json"
+      },
+      {
         "id": "network_rules",
         "enabled": true,
         "path": "rules/network.json"
+      },
+      {
+        "id": "url_rules",
+        "enabled": true,
+        "path": "rules/url-cleaner.json"
       }
     ]
   },
