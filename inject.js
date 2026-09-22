@@ -1,5 +1,5 @@
 /**
- * Privacy Shield v2.2 — inject.js
+ * Privacy Shield v3.0 — inject.js
  *
  * Executes at document_start in MAIN world — before ANY page script runs.
  *
@@ -326,7 +326,7 @@
     enabled: true,
     webrtc: true, canvas: true, webgl: true, audio: true,
     fonts: true, navigator: true, screen: true, geolocation: true,
-    timezone: true, permissions: true,
+    timezone: true, permissions: true, network: true,
   };
 
   // Non-flag preferences pushed from the background via bridge.js.
@@ -335,11 +335,8 @@
     timezone: 'auto',        // 'auto' = per-tab timezone
     spoofedLocation: null,   // { latitude, longitude } used by 'custom' mode
     excludedDomains: [],
-    ipProtection: {
-      mode: 'proxy_required',
-      scheme: 'socks5',
-      host: '',
-      port: 1080,
+    networkPrivacy: {
+      mode: 'direct_hardened',
     },
   };
 
@@ -451,7 +448,7 @@
     const _OrigPC = window.RTCPeerConnection;
 
     if (_OrigPC) {
-      const strictIpLock = _prefs.ipProtection?.mode === 'proxy_required';
+      const strictIpLock = true;
 
       if (strictIpLock) {
         const BlockedPC = function RTCPeerConnection() {
@@ -494,7 +491,7 @@
       return new RTCSessionDescription({ type: desc.type, sdp: clean });
     }
 
-    if (window.RTCPeerConnection && _prefs.ipProtection?.mode !== 'proxy_required') {
+    if (window.RTCPeerConnection && false) {
       overrideMethod(RTCPeerConnection.prototype, 'createOffer', function (orig, args) {
         return orig.apply(this, args).then(sanitizeSDP);
       });
@@ -515,7 +512,32 @@
     }
   }
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 2: CANVAS NOISE (per-tab seeded PRNG)
+  // MODULE 2: NETWORK SURFACE HARDENING
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (on('network')) {
+    if (window.WebTransport) {
+      const NativeWebTransport = window.WebTransport;
+      const BlockedWebTransport = function WebTransport() {
+        throw new DOMException('WebTransport disabled by Privacy Shield.', 'NotAllowedError');
+      };
+      BlockedWebTransport.prototype = NativeWebTransport.prototype;
+      markNative(BlockedWebTransport, 'WebTransport');
+      window.WebTransport = BlockedWebTransport;
+    }
+
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      Object.defineProperty(navigator.mediaDevices, 'enumerateDevices', {
+        value: markNative(function enumerateDevices() {
+          return Promise.resolve([]);
+        }, 'enumerateDevices'),
+        configurable: true,
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MODULE 3: CANVAS NOISE (per-tab seeded PRNG)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('canvas')) {
@@ -593,7 +615,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 3: WebGL PARAMETER MASKING (per-tab GPU profile)
+  // MODULE 4: WebGL PARAMETER MASKING (per-tab GPU profile)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('webgl')) {
@@ -631,7 +653,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 4: AUDIOCONTEXT NOISE (per-tab seeded PRNG)
+  // MODULE 5: AUDIOCONTEXT NOISE (per-tab seeded PRNG)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('audio')) {
@@ -677,7 +699,7 @@
     }
   }
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 5: FONT ENUMERATION & DOM GEOMETRY PROTECTION
+  // MODULE 6: FONT ENUMERATION & DOM GEOMETRY PROTECTION
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('fonts')) {
@@ -739,7 +761,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 6: NAVIGATOR OVERRIDES (per-tab profile)
+  // MODULE 7: NAVIGATOR OVERRIDES (per-tab profile)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('navigator')) {
@@ -799,7 +821,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 7: PERMISSIONS API COHERENCE
+  // MODULE 8: PERMISSIONS API COHERENCE
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('permissions') && navigator.permissions && navigator.permissions.query) {
@@ -829,7 +851,7 @@
     });
   }
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 8: CLIENT HINTS NEUTRALIZATION (per-tab profile)
+  // MODULE 9: CLIENT HINTS NEUTRALIZATION (per-tab profile)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('navigator') && navigator.userAgentData) {
@@ -869,7 +891,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 9: SCREEN OVERRIDES (per-tab profile)
+  // MODULE 10: SCREEN OVERRIDES (per-tab profile)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('screen')) {
@@ -905,7 +927,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 10: GEOLOCATION SPOOFING (per-tab city + micro-jitter)
+  // MODULE 11: GEOLOCATION SPOOFING (per-tab city + micro-jitter)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('geolocation')) {
@@ -975,7 +997,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 11: TIMEZONE & Intl SPOOFING (per-tab timezone)
+  // MODULE 12: TIMEZONE & Intl SPOOFING (per-tab timezone)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('timezone')) {
@@ -1186,13 +1208,8 @@
       if (Array.isArray(s.excludedDomains)) {
         _prefs.excludedDomains = s.excludedDomains.filter(function (domain) { return typeof domain === 'string'; }).map(function (domain) { return domain.toLowerCase(); }).slice(0, 100);
       }
-      if (s.ipProtection && typeof s.ipProtection === 'object') {
-        _prefs.ipProtection = {
-          mode: s.ipProtection.mode === 'browser_only' ? 'browser_only' : 'proxy_required',
-          scheme: typeof s.ipProtection.scheme === 'string' ? s.ipProtection.scheme : 'socks5',
-          host: typeof s.ipProtection.host === 'string' ? s.ipProtection.host : '',
-          port: Number(s.ipProtection.port) || 1080,
-        };
+      if (s.networkPrivacy && typeof s.networkPrivacy === 'object') {
+        _prefs.networkPrivacy = { mode: 'direct_hardened' };
       }
       persistCfg();
     } catch (_) {}
