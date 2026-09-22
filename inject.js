@@ -1495,6 +1495,9 @@
         false,
         ['verify']
       );
+      try {
+        window.postMessage({ __privacyShield: true, type: 'REQUEST_SETTINGS' }, '*');
+      } catch (_) {}
     } catch (_) {
       _settingsVerifyKey = null;
     }
