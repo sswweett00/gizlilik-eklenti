@@ -1,4 +1,4 @@
-# Privacy Shield 4.0
+# Privacy Shield 4.3
 
 Privacy Shield is a Manifest V3 Chromium extension focused on reducing common browser fingerprinting and tracking signals while keeping the underlying browser behavior as coherent as possible.
 
@@ -48,12 +48,13 @@ The generated profile is stored in `sessionStorage` so navigation within the sam
 
 - Chrome privacy API configuration
 - static DNR rulesets
-- per-tab DNR session rules
+- sanitized per-tab identity status/rotation bookkeeping
 - settings validation and persistence
 - site exception rules
 - tab lifecycle cleanup
-- identity rotation
 - extension-wide setting synchronization
+
+It deliberately does **not** rewrite User-Agent or Accept-Language per tab. Keeping native Chromium request identity coherent avoids the BrowserLeaks failure mode where JavaScript, Client Hints and the first navigation advertise different platforms/versions.
 
 ## Important limitation
 
@@ -97,3 +98,17 @@ The repository now includes a complete deployment layer around the extension:
 The strongest zero-cost anonymity configuration is **native Tails + MAC address anonymization + Tor + Tor Browser**. Tor Project explicitly recommends Tor Browser rather than routing ordinary browsers through Tor because ordinary browsers can leak real IP/DNS/WebRTC data and have incompatible fingerprint/cookie behavior. [Tor Browser security guidance](https://support.torproject.org/tor-browser/security/using-tor-with-other-browsers/)
 
 Privacy Shield remains useful as a Chromium **direct-hardened** layer, but it does not and cannot alter a direct connection's source IP without an intermediary network path.
+
+
+## AEGIS-9 System Profile
+
+The repository now includes a system-level zero-cost companion architecture:
+
+- `docs/AEGIS9_ARCHITECTURE.md`
+- `scripts/qubes/aegis-install-whonix.sh`
+- `scripts/qubes/aegis-configure.sh`
+- `scripts/qubes/aegis-audit.sh`
+
+The supported Qubes-Whonix path is **Qubes R4.3 + Whonix 18** with `anon-whonix -> sys-whonix -> Tor` and a Whonix disposable template (`whonix-workstation-18-dvm`). Qubes documents `qvm-prefs <qube> netvm sys-whonix` and per-qube `default_dispvm`; Qubes-Whonix creates the standard anonymous qube topology through the official setup. citeturn303752search2turn602539search2turn602539search0
+
+Use the Qubes helper in **dry-run mode first**. It never changes the system unless `--apply` is explicitly supplied.
