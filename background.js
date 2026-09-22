@@ -237,7 +237,9 @@ async function getNetworkPrivacyStatus() {
   try { proxyState = await getCurrentProxy(); } catch (_) {}
 
   const torExpected = settings.enabled && settings.networkPrivacy.mode === 'local_tor';
-  const torActive = torExpected && isOurTorProxy(proxyState?.value, settings.networkPrivacy.torPort);
+  const torConfigured = torExpected && isOurTorProxy(proxyState?.value, settings.networkPrivacy.torPort);
+  const torVerification = (await chrome.storage.session.get('torVerification')).torVerification || null;
+  const torActive = torConfigured && torVerification?.verified === true;
   const lastProxyError = (await chrome.storage.session.get('lastProxyError')).lastProxyError || null;
 
   return {
@@ -248,7 +250,11 @@ async function getNetworkPrivacyStatus() {
     browserPrivacyModuleEnabled: settings.modules.browserPrivacy,
     proxyMode: settings.networkPrivacy.mode,
     torPort: settings.networkPrivacy.torPort,
+    proxyConfigured: torConfigured,
     proxyActive: torActive,
+    torVerified: torActive,
+    torExitIp: torVerification?.exitIp || null,
+    torVerificationReason: torVerification?.reason || null,
     proxyControlLevel: proxyState?.levelOfControl || null,
     sourceIpVisibility: torActive ? 'expected_hidden_via_local_tor' : 'direct_connection_visible',
     webRtcPolicy: values['network.webRTCIPHandlingPolicy'],
@@ -306,6 +312,61 @@ async function getCurrentProxy() {
     return await chrome.proxy.settings.get({ incognito: false });
   } catch (err) {
     return { value: null, levelOfControl: 'not_controllable', error: err?.message || String(err) };
+  }
+}
+
+async function verifyTorPath(port) {
+  const currentProxy = await getCurrentProxy();
+  if (!isOurTorProxy(currentProxy?.value, port)) {
+    return { verified: false, reason: 'configured_proxy_inactive' };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch('https://check.torproject.org/api/ip', {
+      cache: 'no-store',
+      redirect: 'error',
+      credentials: 'omit',
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return { verified: false, reason: 'tor_check_http_' + response.status };
+    }
+    const payload = await response.json();
+    const verified = payload?.IsTor === true;
+    return {
+      verified,
+      exitIp: typeof payload?.IP === 'string' ? payload.IP : null,
+      reason: verified ? 'verified' : 'not_tor_exit',
+    };
+  } catch (err) {
+    return {
+      verified: false,
+      reason: err?.name === 'AbortError' ? 'tor_check_timeout' : String(err?.message || err),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function persistTorVerification(result) {
+  if (result?.verified) {
+    await chrome.storage.session.set({
+      torVerification: {
+        verified: true,
+        exitIp: result.exitIp || null,
+        verifiedAt: Date.now(),
+      },
+    });
+  } else {
+    await chrome.storage.session.set({
+      torVerification: {
+        verified: false,
+        reason: result?.reason || 'unknown',
+        verifiedAt: Date.now(),
+      },
+    });
   }
 }
 
@@ -370,10 +431,30 @@ async function applyNetworkProxy() {
 
       const applied = await getCurrentProxy();
       if (isOurTorProxy(applied.value, settings.networkPrivacy.torPort)) {
-        await setTorKillSwitch(false);
-        await chrome.storage.session.remove('lastProxyError');
+        const verification = await verifyTorPath(settings.networkPrivacy.torPort);
+        await persistTorVerification(verification);
+
+        if (verification.verified) {
+          await setTorKillSwitch(false);
+          await chrome.storage.session.remove('lastProxyError');
+        } else {
+          await chrome.storage.session.set({
+            lastProxyError: {
+              message: 'Tor exit verification failed.',
+              details: verification.reason || 'Unknown Tor verification failure.',
+              fatal: true,
+              at: Date.now(),
+            },
+          });
+          await setTorKillSwitch(true);
+        }
       } else {
         await chrome.storage.session.set({
+          torVerification: {
+            verified: false,
+            reason: 'proxy_configuration_rejected',
+            verifiedAt: Date.now(),
+          },
           lastProxyError: {
             message: 'Local Tor proxy was not accepted as the active Chrome proxy configuration.',
             details: 'Kill-switch remains enabled.',
@@ -403,6 +484,7 @@ async function applyNetworkProxy() {
     // Restore ordinary networking only after the Tor proxy is no longer active.
     await setTorKillSwitch(false);
     await chrome.storage.session.remove('lastProxyError');
+    await chrome.storage.session.remove('torVerification');
   } catch (err) {
     console.error('[PrivacyShield] Local Tor proxy apply/restore failed:', err);
     if (torSelected) {
@@ -818,23 +900,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             break;
           }
           try {
-            const currentProxy = await getCurrentProxy();
-            if (!isOurTorProxy(currentProxy?.value, settings.networkPrivacy.torPort)) {
-              throw new Error('The selected local Tor proxy is not active; verification aborted to prevent a direct-network check.');
+            const verification = await verifyTorPath(settings.networkPrivacy.torPort);
+            await persistTorVerification(verification);
+            if (verification.verified) {
+              await chrome.storage.session.remove('lastProxyError');
+              await setTorKillSwitch(false);
+            } else {
+              await setTorKillSwitch(true);
             }
-            const response = await fetch('https://check.torproject.org/api/ip', {
-              cache: 'no-store',
-              redirect: 'error',
-              credentials: 'omit',
-            });
-            if (!response.ok) throw new Error('Tor verification endpoint returned HTTP ' + response.status);
-            const payload = await response.json();
             sendResponse({
               success: true,
-              isTor: payload?.IsTor === true,
-              exitIp: typeof payload?.IP === 'string' ? payload.IP : null,
+              isTor: verification.verified === true,
+              exitIp: verification.exitIp || null,
+              reason: verification.reason || null,
             });
           } catch (err) {
+            await persistTorVerification({ verified: false, reason: 'check_error' });
+            await setTorKillSwitch(true);
             sendResponse({
               success: false,
               error: 'Local Tor connection failed: ' + (err?.message || String(err)),
