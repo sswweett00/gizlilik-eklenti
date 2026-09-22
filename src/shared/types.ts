@@ -8,6 +8,12 @@ export interface ExtensionModules {
   timezone: boolean; headers: boolean; permissions: boolean; network: boolean;
   trackers: boolean; ads: boolean; urlCleaner: boolean; browserPrivacy: boolean;
 }
+export type ExtensionSettingsPatch = Partial<Omit<ExtensionSettings, 'modules' | 'spoofedLocation' | 'networkPrivacy'>> & {
+  modules?: Partial<ExtensionModules>;
+  spoofedLocation?: Partial<ExtensionSettings['spoofedLocation']>;
+  networkPrivacy?: Partial<ExtensionSettings['networkPrivacy']>;
+};
+
 export interface ExtensionSettings {
   enabled: boolean;
   securityMode: SecurityMode;
