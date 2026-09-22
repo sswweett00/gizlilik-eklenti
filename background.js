@@ -31,7 +31,8 @@ const DEFAULT_SETTINGS = {
     network: true,
   },
   timezone: 'auto', // 'auto' = unique per-tab timezone from the city pool
-  geolocationMode: 'spoof', // 'deny' | 'spoof' (per-tab city) | 'custom'
+  securityMode: 'maximum_direct',
+  geolocationMode: 'deny', // Maximum mode never exposes a synthetic location by default
   spoofedLocation: {
     latitude: 40.7128,
     longitude: -74.0060,
@@ -47,6 +48,7 @@ const DEFAULT_SETTINGS = {
 function publicSettings(s) {
   return {
     enabled: s.enabled,
+    securityMode: s.securityMode,
     modules: s.modules,
     timezone: s.timezone,
     geolocationMode: s.geolocationMode,
@@ -194,7 +196,7 @@ async function getNetworkPrivacyStatus() {
   }
 
   return {
-    mode: 'direct_hardened',
+    mode: settings.securityMode === 'maximum_direct' ? 'maximum_direct' : 'direct_hardened',
     sourceIpVisibility: 'direct_connection_visible',
     webRtcPolicy: values['network.webRTCIPHandlingPolicy'],
     networkPrediction: values['network.networkPredictionEnabled'],
@@ -543,7 +545,7 @@ async function applySiteExceptionRules() {
         action: { type: 'allow' },
         condition: {
           requestDomains: [domain],
-          resourceTypes: RESOURCE_TYPES,
+          resourceTypes: RESOURCE_TYPES.filter((type) => type !== 'webtransport' && type !== 'ping'),
         },
       });
 
@@ -553,7 +555,7 @@ async function applySiteExceptionRules() {
         action: { type: 'allow' },
         condition: {
           initiatorDomains: [domain],
-          resourceTypes: RESOURCE_TYPES.concat(['ping', 'websocket']),
+          resourceTypes: RESOURCE_TYPES.filter((type) => type !== 'webtransport' && type !== 'ping'),
         },
       });
     });
@@ -608,6 +610,10 @@ function sanitizeIncomingSettings(raw) {
 
   if (typeof raw.enabled === 'boolean') out.enabled = raw.enabled;
 
+  if (raw.securityMode === 'maximum_direct' || raw.securityMode === 'compatibility') {
+    out.securityMode = raw.securityMode;
+  }
+
   if (raw.networkPrivacy && typeof raw.networkPrivacy === 'object' && !Array.isArray(raw.networkPrivacy)) {
     out.networkPrivacy = { mode: 'direct_hardened' };
   }
@@ -647,7 +653,19 @@ function sanitizeIncomingSettings(raw) {
 }
 
 function normalizeSettings(raw) {
-  return deepMerge(DEFAULT_SETTINGS, sanitizeIncomingSettings(raw || {}));
+  const normalized = deepMerge(DEFAULT_SETTINGS, sanitizeIncomingSettings(raw || {}));
+
+  if (normalized.securityMode === 'maximum_direct') {
+    // These protections are the direct-connection safety floor. They are
+    // never weakened by malformed storage, popup races or page-controlled data.
+    for (const key of Object.keys(DEFAULT_SETTINGS.modules)) {
+      normalized.modules[key] = true;
+    }
+    normalized.geolocationMode = 'deny';
+    normalized.networkPrivacy = { mode: 'direct_hardened' };
+  }
+
+  return normalized;
 }
 
 function settingsRequireReload(previous, next) {
