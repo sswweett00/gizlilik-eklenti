@@ -79,7 +79,6 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   await applyContentSettings();
   await applyRuleSets();
   await applySiteExceptionRules();
-  await applyDirectPrivacyPolicy();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
@@ -89,7 +88,6 @@ chrome.runtime.onStartup.addListener(async () => {
   await applyContentSettings();
   await applyRuleSets();
   await applySiteExceptionRules();
-  await applyDirectPrivacyPolicy();
 });
 
 // ─── Privacy API Settings ─────────────────────────────────────────────────────
@@ -103,7 +101,9 @@ const PRIVACY_ITEMS = () => [
 ];
 
 function privacyModuleForKey(key) {
-  return key === 'network.webRTCIPHandlingPolicy' ? 'webrtc' : 'browserPrivacy';
+  if (key === 'network.webRTCIPHandlingPolicy') return 'webrtc';
+  if (key === 'network.networkPredictionEnabled') return 'network';
+  return 'browserPrivacy';
 }
 
 async function applyPrivacySettings() {
@@ -121,6 +121,7 @@ async function applyPrivacySettings() {
           }
         }
       }
+      await chrome.storage.session.remove('privacyPolicy');
       return;
     }
 
@@ -385,23 +386,14 @@ function buildAcceptLanguage(languages) {
 const SITE_RULE_ID_BASE = 10000;
 const SITE_RULE_PRIORITY = 10000;
 
+const SITE_EXCEPTION_RESOURCE_TYPES = Object.freeze([
+  'main_frame', 'sub_frame', 'stylesheet', 'script', 'image', 'font',
+  'object', 'xmlhttprequest', 'media', 'websocket', 'other',
+]);
+
 async function applySiteExceptionRules() {
   const settings = await getSettings();
-  if (settings.securityMode === 'maximum_direct') {
-    try {
-      const current = await chrome.declarativeNetRequest.getDynamicRules();
-      const ours = current
-        .filter((rule) => rule.id >= SITE_RULE_ID_BASE && rule.id < SITE_RULE_ID_BASE + 200)
-        .map((rule) => rule.id);
-      if (ours.length) {
-        await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: ours });
-      }
-    } catch (err) {
-      console.error('[PrivacyShield] Maximum-mode site exception cleanup failed:', err);
-    }
-    return;
-  }
-  const domains = settings.excludedDomains || [];
+  const domains = settings.enabled ? (settings.excludedDomains || []) : [];
   try {
     const current = await chrome.declarativeNetRequest.getDynamicRules();
     const ours = current
@@ -419,7 +411,7 @@ async function applySiteExceptionRules() {
         action: { type: 'allow' },
         condition: {
           requestDomains: [domain],
-          resourceTypes: RESOURCE_TYPES.filter((type) => type !== 'webtransport' && type !== 'ping'),
+          resourceTypes: SITE_EXCEPTION_RESOURCE_TYPES,
         },
       });
 
@@ -429,7 +421,7 @@ async function applySiteExceptionRules() {
         action: { type: 'allow' },
         condition: {
           initiatorDomains: [domain],
-          resourceTypes: RESOURCE_TYPES.filter((type) => type !== 'webtransport' && type !== 'ping'),
+          resourceTypes: SITE_EXCEPTION_RESOURCE_TYPES,
         },
       });
     });
@@ -579,13 +571,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const current = await getSettings();
           const updated = normalizeSettings(deepMerge(current, sanitizeIncomingSettings(message.settings)));
           await chrome.storage.local.set({ settings: updated });
+          await onSettingsChanged(current, updated);
           sendResponse({ success: true, settings: updated });
           break;
         }
 
         case 'RESET_SETTINGS': {
           const defaults = normalizeSettings(DEFAULT_SETTINGS);
+          const current = await getSettings();
           await chrome.storage.local.set({ settings: defaults });
+          await onSettingsChanged(current, defaults);
           sendResponse({ success: true, settings: defaults });
           break;
         }
@@ -653,6 +648,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
           const updated = normalizeSettings({ ...current, excludedDomains: [...excludedDomains] });
           await chrome.storage.local.set({ settings: updated });
+          await onSettingsChanged(current, updated);
           sendResponse({ success: true, excluded, host: domain, settings: updated });
           break;
         }
@@ -762,27 +758,42 @@ async function buildStatus() {
 
 // ─── Storage Change Listener ──────────────────────────────────────────────────
 
-let sessionRuleRebuildQueue = Promise.resolve();
+let settingsApplyQueue = Promise.resolve();
+let lastAppliedSettingsFingerprint = null;
 
 function enqueue(task) {
-  const run = sessionRuleRebuildQueue.then(task, task);
-  sessionRuleRebuildQueue = run.catch(() => {});
+  const run = settingsApplyQueue.then(task, task);
+  settingsApplyQueue = run.catch(() => {});
   return run;
 }
 
-async function onSettingsChanged(previousSettings, nextSettings) {
+function settingsFingerprint(settings) {
+  return JSON.stringify(normalizeSettings(settings));
+}
+
+async function applySettingsRuntime(previousSettings, nextSettings) {
   const settings = nextSettings || await getSettings();
   await applyPrivacySettings();
   await applyContentSettings();
   await applyRuleSets();
   await applySiteExceptionRules();
-  await applyDirectPrivacyPolicy();
-  await enqueue(() => rebuildAllSessionRules());
+  await rebuildAllSessionRules();
   await broadcastSettingsToTabs();
 
   if (settingsRequireReload(previousSettings, settings)) {
     await reloadProtectionTabs();
   }
+
+  lastAppliedSettingsFingerprint = settingsFingerprint(settings);
+}
+
+async function onSettingsChanged(previousSettings, nextSettings) {
+  const settings = nextSettings || await getSettings();
+  const fingerprint = settingsFingerprint(settings);
+  return enqueue(async () => {
+    if (fingerprint === lastAppliedSettingsFingerprint) return;
+    await applySettingsRuntime(previousSettings, settings);
+  });
 }
 
 async function broadcastSettingsToTabs() {
@@ -799,7 +810,6 @@ async function broadcastSettingsToTabs() {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local' || !changes.settings) return;
-  console.log('[PrivacyShield] Settings changed, reapplying...');
   const previousSettings = changes.settings.oldValue ? normalizeSettings(changes.settings.oldValue) : null;
   const nextSettings = normalizeSettings(changes.settings.newValue || {});
   onSettingsChanged(previousSettings, nextSettings).catch((err) =>
