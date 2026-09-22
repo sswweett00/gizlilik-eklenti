@@ -9,6 +9,7 @@ const trackerRules = JSON.parse(read('rules/trackers.json'));
 const networkRules = JSON.parse(read('rules/network.json'));
 const adRules = JSON.parse(read('rules/adblock.json'));
 const urlRules = JSON.parse(read('rules/url-cleaner.json'));
+const permissionRules = JSON.parse(read('rules/permissions.json'));
 
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.version, '4.6.0');
@@ -31,7 +32,7 @@ for (const path of ['background.js', 'bridge.js', 'inject.js', 'popup.js']) {
   );
 }
 
-for (const [name, rules] of [['header', headerRules], ['tracker', trackerRules], ['ad', adRules], ['network', networkRules], ['url', urlRules]]) {
+for (const [name, rules] of [['header', headerRules], ['permission', permissionRules], ['tracker', trackerRules], ['ad', adRules], ['network', networkRules], ['url', urlRules]]) {
   const ids = rules.map((rule) => rule.id);
   assert.equal(new Set(ids).size, ids.length, name + ' rule IDs must be unique');
   for (const rule of rules) {
@@ -142,7 +143,8 @@ assert.ok(popupSource.includes('Visible in direct mode'), 'popup must not falsel
 assert.ok(popupSource.includes('IP-location'), 'popup must disclose the IP-location limitation');
 assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum direct security mode must be the default');
 assert.ok(backgroundSource.includes("geolocationMode: 'deny'"), 'geolocation must be deny-by-default');
-assert.ok(new Set([...headerRules, ...trackerRules, ...networkRules, ...urlRules].map((rule) => rule.id)).size === headerRules.length + trackerRules.length + networkRules.length + urlRules.length, 'all static DNR rule IDs must be globally unique');
+assert.ok(new Set([...headerRules, ...permissionRules, ...trackerRules, ...networkRules, ...urlRules].map((rule) => rule.id)).size === headerRules.length + permissionRules.length + trackerRules.length + networkRules.length + urlRules.length, 'all static DNR rule IDs must be globally unique');
+assert.ok(permissionRules.some((rule) => rule.action?.responseHeaders?.some((h) => h.header === 'Permissions-Policy' && h.operation === 'set')), 'permission rules must enforce a Permissions-Policy response header');
 assert.ok(backgroundSource.includes('trackers: true'), 'tracker blocking must be independently configurable');
 assert.ok(backgroundSource.includes('ads: true'), 'ad blocking must be independently configurable');
 assert.ok(backgroundSource.includes('urlCleaner: true'), 'URL cleaning must be independently configurable');
