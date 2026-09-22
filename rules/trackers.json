@@ -2,7 +2,9 @@
   {
     "id": 200,
     "priority": 1,
-    "action": { "type": "block" },
+    "action": {
+      "type": "block"
+    },
     "condition": {
       "requestDomains": [
         "doubleclick.net",
@@ -44,7 +46,32 @@
         "clarity.ms",
         "mousezoom.net",
         "luckysearches.com",
-        "popmarker.com"
+        "popmarker.com",
+        "bat.bing.com",
+        "analytics.tiktok.com",
+        "business-api.tiktok.com",
+        "tr.snapchat.com",
+        "sc-static.net",
+        "ct.pinterest.com",
+        "ads.linkedin.com",
+        "px.ads.linkedin.com",
+        "snap.licdn.com",
+        "analytics.twitter.com",
+        "ads-api.twitter.com",
+        "collect.tealiumiq.com",
+        "tags.tiqcdn.com",
+        "pixel.wp.com",
+        "stats.wp.com",
+        "stats.g.doubleclick.net",
+        "cm.g.doubleclick.net",
+        "doubleverify.com",
+        "adsrvr.org",
+        "serving-sys.com",
+        "advertising.com",
+        "33across.com",
+        "yieldmo.com",
+        "sovrn.com",
+        "lijit.com"
       ],
       "resourceTypes": [
         "script",
