@@ -46,7 +46,7 @@
       <span class="ip-lock-dot protected" id="ipLockDot"></span>
       <div class="ip-lock-info">
         <span class="ip-lock-title" id="ipLockTitle">Direct connection hardened</span>
-        <span class="ip-lock-sub" id="ipLockSub">WebRTC/WebTransport leak surfaces and browser-side tracking signals are hardened.</span>
+        <span class="ip-lock-sub" id="ipLockSub">Browser-side location APIs are denied, common third-party IP-geolocation lookups are blocked, and network leak surfaces are hardened.</span>
       </div>
     </div>
 
@@ -56,13 +56,14 @@
         <span class="status-item-value">Direct</span>
       </div>
       <div class="status-item">
-        <span class="status-item-label">Public IP</span>
-        <span class="status-item-value">Visible to destination</span>
+        <span class="status-item-label">Public IP / IP location</span>
+        <span class="status-item-value">Visible in direct mode</span>
       </div>
     </div>
 
     <p class="site-help"><strong>Maximum direct mode:</strong> all browser privacy modules are locked on, geolocation is deny-by-default, WebRTC/WebTransport are blocked, and beacon/ping telemetry is blocked.</p>
-    <p class="site-help"><strong>Important:</strong> this Chromium extension cannot hide the source IP, ISP/ASN, TCP/IP fingerprint, JA3/JA4 or complete HTTP/2 fingerprint of a direct connection.</p>
+    <p class="site-help"><strong>Location boundary:</strong> the Geolocation API is blocked and common IP-location API lookups are denied, but a website can still derive approximate location from the public IP that receives the connection.</p>
+    <p class="site-help"><strong>Important:</strong> this Chromium extension cannot hide the source IP, ISP/ASN, TCP/IP fingerprint, JA3/JA4 or complete HTTP/2 fingerprint of a direct connection. To hide IP-based location from the destination, the browser must use Tor, VPN, proxy, or another intermediary network path.</p>
     <p class="site-help"><strong>AEGIS-9:</strong> for zero-cost website-visible IP anonymity, use Qubes R4.3 + Whonix 18 with <code>anon-whonix → sys-whonix → Tor</code> and a Whonix disposable template. See the repository deployment guide.</p>
   </section>
 
