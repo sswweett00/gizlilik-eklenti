@@ -93,12 +93,22 @@ function renderUI(settings) {
 
   masterToggle.disabled = false;
   masterToggle.removeAttribute('aria-disabled');
+  const localTorLock = settings.enabled && settings.networkPrivacy?.mode === 'local_tor';
+  const forcedModules = new Set(['webrtc', 'network', 'permissions', 'geolocation', 'browserPrivacy']);
+
   moduleToggles.forEach((toggle) => {
     const key = toggle.dataset.key;
     const enabled = settings.modules[key] !== false;
+    const forced = localTorLock && forcedModules.has(key);
     toggle.checked = enabled;
-    toggle.disabled = false;
-    toggle.removeAttribute('aria-disabled');
+    toggle.disabled = forced;
+    if (forced) {
+      toggle.setAttribute('aria-disabled', 'true');
+      toggle.title = 'Required while Local Tor is active';
+    } else {
+      toggle.removeAttribute('aria-disabled');
+      toggle.removeAttribute('title');
+    }
     updateModuleCardState(toggle.closest('.module-card'), enabled);
   });
 
