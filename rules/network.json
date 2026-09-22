@@ -2,9 +2,25 @@
   {
     "id": 300,
     "priority": 100,
-    "action": { "type": "block" },
+    "action": {
+      "type": "block"
+    },
     "condition": {
-      "resourceTypes": ["webtransport"]
+      "resourceTypes": [
+        "webtransport"
+      ]
+    }
+  },
+  {
+    "id": 301,
+    "priority": 90,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "resourceTypes": [
+        "ping"
+      ]
     }
   }
 ]
