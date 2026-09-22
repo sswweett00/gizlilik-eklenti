@@ -18,6 +18,7 @@ const manifest = {
     'proxy',
   ],
   host_permissions: ['<all_urls>'],
+  incognito: 'spanning',
   background: {
     service_worker: 'src/background/index.ts',
     type: 'module',
