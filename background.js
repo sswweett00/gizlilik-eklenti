@@ -507,8 +507,8 @@ function sanitizeIncomingSettings(raw) {
 
   if (typeof raw.enabled === 'boolean') out.enabled = raw.enabled;
 
-  if (raw.securityMode === 'maximum_direct' || raw.securityMode === 'compatibility') {
-    out.securityMode = raw.securityMode;
+  if (raw.securityMode === 'maximum_direct') {
+    out.securityMode = 'maximum_direct';
   }
 
   if (raw.networkPrivacy && typeof raw.networkPrivacy === 'object' && !Array.isArray(raw.networkPrivacy)) {
@@ -551,6 +551,10 @@ function sanitizeIncomingSettings(raw) {
 
 function normalizeSettings(raw) {
   const normalized = deepMerge(DEFAULT_SETTINGS, sanitizeIncomingSettings(raw || {}));
+  // 4.4+ is a single hardened posture: compatibility mode cannot be used to
+  // re-enable high-entropy location/device surfaces.
+
+  normalized.securityMode = 'maximum_direct';
 
   if (normalized.securityMode === 'maximum_direct') {
     // Maximum mode is immutable/fail-closed: page-controlled settings,
