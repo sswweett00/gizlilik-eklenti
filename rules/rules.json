@@ -75,5 +75,25 @@
         "other"
       ]
     }
+  },
+  {
+    "id": 2,
+    "priority": 5,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        {
+          "header": "X-DNS-Prefetch-Control",
+          "operation": "set",
+          "value": "off"
+        }
+      ]
+    },
+    "condition": {
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame"
+      ]
+    }
   }
 ]
