@@ -1,8 +1,7 @@
 export const TRACKING_QUERY_PARAMS = Object.freeze([
   'utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id',
   'gclid','dclid','fbclid','mc_cid','mc_eid','msclkid','yclid','_hsenc',
-  'igshid','vero_id','oly_enc_id','oly_anon_id','ref','ref_',
-]);
+  'igshid','vero_id','oly_enc_id','oly_anon_id',]);
 
 export const IP_DISCOVERY_DOMAINS = Object.freeze([
   'api.ipify.org','api64.ipify.org','ipify.org','ifconfig.co','ifconfig.me',
