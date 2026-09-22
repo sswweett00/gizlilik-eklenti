@@ -81,6 +81,11 @@
         "id": "url_rules",
         "enabled": true,
         "path": "rules/url-cleaner.json"
+      },
+      {
+        "id": "permission_rules",
+        "enabled": true,
+        "path": "rules/permissions.json"
       }
     ]
   },
