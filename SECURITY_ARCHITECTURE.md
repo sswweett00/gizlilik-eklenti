@@ -1,10 +1,10 @@
-# Privacy Shield 4.7 — Security Architecture
+# Privacy Shield 4.8 — Security Architecture
 
 ## Executive Summary
 
-Privacy Shield 4.7 is a Chromium privacy-hardening extension plus an AEGIS-9 zero-cost system deployment model for direct network connections. It does not configure or depend on a proxy, VPN, or Tor.
+Privacy Shield 4.8 is a Chromium-first privacy-hardening extension with two network-path postures: Direct Hardened and optional Local Tor. The Local Tor mode uses Chromium's proxy API to point the browser at a locally running Tor SOCKS5 endpoint; no paid VPN or remote proxy service is required.
 
-The system deliberately does not claim to hide the public source IP of a normal direct TCP/QUIC connection. A destination server necessarily receives the network source address of the connection that reaches it. Network-layer anonymity therefore remains outside the capability of a browser extension without an intermediary network path.
+Direct Hardened mode deliberately does not claim to hide the public source IP of a normal direct TCP/QUIC connection. Local Tor changes that network path by making Chromium use a local SOCKS5 Tor endpoint. If the endpoint is unavailable, Privacy Shield does not configure a direct fallback proxy.
 
 The achievable security goal is: reduce browser-side fingerprinting, block major alternate browser transport surfaces, minimize tracking/telemetry APIs, keep JavaScript and request identities coherent, enforce a maximum direct-privacy baseline, validate all settings, and report residual risk honestly.
 
@@ -15,13 +15,14 @@ The achievable security goal is: reduce browser-side fingerprinting, block major
 1. Main-world injector: inject.js. Runs at document_start and hardens WebRTC, WebTransport, Canvas, WebGL, Audio, DOM geometry, Navigator, Client Hints, Screen, Geolocation, Permissions, and Timezone APIs.
 2. Isolated bridge: bridge.js. Relays profiles and settings between the page world and extension service worker using cryptographically signed settings updates from an isolated-world signing key. The main-world verifier still shares the page JavaScript environment, so the browser's MAIN/ISOLATED trust boundary remains a platform limitation rather than a substitute for a native isolated execution boundary.
 3. Background service worker: background.js. Owns browser privacy policies, static/dynamic DNR state, sanitized per-tab profile bookkeeping, validation, site exceptions, rotation, tab lifecycle and status reporting.
-4. Declarative network rules: header_rules, permission_rules, tracker_rules, ad_rules, network_rules and url_rules. The permission ruleset adds a browser-enforced Permissions-Policy response layer.
+4. Declarative network rules: header_rules, permission_rules, tracker_rules, ad_rules, network_rules and url_rules. The permission ruleset adds a browser-enforced Permissions-Policy response layer. Network rules also block common IP-echo and IP-geolocation lookup endpoints.
 5. Zero-cost deployment assets: OS audit tools and deployment guidance for Windows, Linux, macOS, native Tails, Tor and Tor Browser. Tor/Tails are intentionally external system components; the extension never attempts to impersonate or reimplement them.
 
 ### Data Flow
 
 Navigation -> document_start injector -> isolated bridge -> service worker profile/status registration -> browser privacy/DNR policy. The first navigation remains native; legacy per-tab header spoofing is no longer used.
-Settings change -> local storage -> service worker validation -> privacy APIs/DNR update -> signed MAIN-world update -> targeted tab reload when required.
+Network-path change -> validated local settings -> browser proxy API -> localhost SOCKS5 Tor endpoint, with no direct proxy fallback.
+Settings change -> local storage -> service worker validation -> privacy APIs/DNR/proxy update -> signed MAIN-world update -> targeted tab reload when required.
 
 ## Threat Model
 
@@ -121,7 +122,7 @@ The extension is self-contained and has no remote authentication service. Its se
 
 ### Anonymity
 
-Network anonymity is not achievable under the stated no-proxy/VPN/Tor constraint. Without an intermediary or equivalent network-path change, the destination can observe the public source IP of the direct connection.
+Direct Hardened mode is not network anonymity. Local Tor mode changes the source network path, so the destination is expected to observe the Tor exit rather than the local public IP. Residual risks include browser fingerprinting, account-based identification, application behaviors outside the proxied browser, Tor network correlation and future browser implementation changes.
 
 ### Residual Risks
 
@@ -140,9 +141,7 @@ Recommended runtime validation matrix: Chrome stable/Beta/Chromium on Windows, L
 
 ## Conclusion
 
-Privacy Shield 3.0 should be treated as a production-oriented direct-connection privacy hardener, not as an anonymous networking system.
-
-The correct security property is: maximum browser-side privacy, explicit residual-risk disclosure, strong local leak resistance, coherent tab identities, and no false promise that a browser extension can hide the public IP of a direct network connection without changing the network path.
+Privacy Shield 4.8 is a browser privacy hardener with an optional localhost Tor egress path. Direct Hardened mode provides leak resistance without changing the source IP; Local Tor changes the network path and deliberately avoids direct fallback. Neither mode should be treated as a complete substitute for Tor Browser or a system-wide anonymous networking stack.
 
 
 ## AEGIS-9 system profile
