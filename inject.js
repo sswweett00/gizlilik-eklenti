@@ -903,6 +903,44 @@
       } catch (_) {}
       return img;
     });
+
+    // OffscreenCanvas has a separate 2D context surface and can otherwise
+    // bypass the HTMLCanvasElement serialization hooks above.
+    if (window.OffscreenCanvas) {
+      const offscreenContext = window.OffscreenCanvasRenderingContext2D;
+      if (offscreenContext && offscreenContext.prototype) {
+        try {
+          overrideMethod(offscreenContext.prototype, 'getImageData', function (orig, args) {
+            const img = orig.apply(this, args);
+            try {
+              const cw = (this.canvas && this.canvas.width) || img.width;
+              noisifyRegion(img.data, args[0] | 0, args[1] | 0, args[2] | 0, cw);
+            } catch (_) {}
+            return img;
+          });
+        } catch (_) {}
+      }
+
+      overrideMethod(window.OffscreenCanvas.prototype, 'convertToBlob', function (orig, args) {
+        try {
+          const width = this.width;
+          const height = this.height;
+          const ctx = this.getContext('2d');
+          if (!ctx || !width || !height) return orig.apply(this, args);
+
+          const current = ctx.getImageData(0, 0, width, height);
+          const noised = new ImageData(new Uint8ClampedArray(current.data), width, height);
+          noisifyRegion(noised.data, 0, 0, width, width);
+
+          const temp = new window.OffscreenCanvas(width, height);
+          const tempCtx = temp.getContext('2d');
+          tempCtx.putImageData(noised, 0, 0);
+          return orig.apply(temp, args);
+        } catch (_) {
+          return orig.apply(this, args);
+        }
+      });
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1102,6 +1140,54 @@
           });
         } catch (_) {}
       }
+    }
+
+    // Standardize common OS preference media queries that otherwise expose
+    // local theme/accessibility choices. Layout and resolution queries remain native.
+    const _nativeMatchMedia = typeof window.matchMedia === 'function'
+      ? window.matchMedia.bind(window)
+      : null;
+    if (_nativeMatchMedia) {
+      const MEDIA_QUERY_OVERRIDES = [
+        [/\\(prefers-color-scheme\\s*:\\s*dark\\)/i, false],
+        [/\\(prefers-color-scheme\\s*:\\s*light\\)/i, true],
+        [/\\(prefers-reduced-motion\\s*:\\s*reduce\\)/i, false],
+        [/\\(prefers-contrast\\s*:\\s*(more|less)\\)/i, false],
+        [/\\(forced-colors\\s*:\\s*active\\)/i, false],
+        [/\\(inverted-colors\\s*:\\s*inverted\\)/i, false],
+      ];
+
+      function normalizedMatchMedia(query) {
+        const mql = _nativeMatchMedia(query);
+        const raw = String(query || '');
+        let forced = null;
+        for (const [pattern, value] of MEDIA_QUERY_OVERRIDES) {
+          if (pattern.test(raw)) {
+            forced = value;
+            break;
+          }
+        }
+        if (forced === null) return mql;
+
+        return new Proxy(mql, {
+          get(target, prop, receiver) {
+            if (prop === 'matches') return forced;
+            if (prop === 'onchange') return null;
+            if (prop === 'addEventListener' || prop === 'addListener') {
+              return function () { return undefined; };
+            }
+            return Reflect.get(target, prop, receiver);
+          },
+        });
+      }
+
+      try {
+        defProp(window, 'matchMedia', {
+          value: markNative(normalizedMatchMedia, 'matchMedia'),
+          writable: true,
+          configurable: true,
+        });
+      } catch (_) {}
     }
 
     // Delete network info fingerprinting APIs
