@@ -1,5 +1,5 @@
 /**
- * Privacy Shield v3.0 — inject.js
+ * Privacy Shield v3.1 — inject.js
  *
  * Executes at document_start in MAIN world — before ANY page script runs.
  *
@@ -508,6 +508,14 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('network')) {
+    // WebGPU exposes adapter capabilities and limits that can become a high-
+    // entropy hardware fingerprint. Maximum mode disables the page API.
+    try {
+      if ('gpu' in Navigator.prototype) {
+        defProp(Navigator.prototype, 'gpu', { get: function () { return undefined; } });
+      }
+    } catch (_) {}
+
     if (window.WebTransport) {
       const NativeWebTransport = window.WebTransport;
       const BlockedWebTransport = function WebTransport() {
