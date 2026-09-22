@@ -7,10 +7,10 @@ const headerRules = JSON.parse(read('rules/rules.json'));
 const trackerRules = JSON.parse(read('rules/trackers.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '2.3.0');
+assert.equal(manifest.version, '3.0.0');
 assert.deepEqual(
   manifest.permissions,
-  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs', 'proxy']
+  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs']
 );
 
 const worlds = manifest.content_scripts.map((entry) => ({
@@ -82,3 +82,37 @@ const popupSource = read('popup.html') + '\n' + read('popup.js');
 for (const marker of ['ipProtectionMode', 'proxyScheme', 'proxyHost', 'proxyPort', 'ipLockTitle']) {
   assert.ok(popupSource.includes(marker), 'popup missing ' + marker);
 }
+assert.ok(!manifest.permissions.includes('proxy'), 'implementation must not require the proxy API');
+const networkRules = JSON.parse(read('rules/network.json'));
+assert.ok(
+  networkRules.some((rule) => rule.action?.type === 'block' && rule.condition?.resourceTypes?.includes('webtransport')),
+  'WebTransport must be blocked in hardened network mode'
+);
+
+const backgroundSource = read('background.js');
+const injectSource = read('inject.js');
+const popupSource = read('popup.html') + '\n' + read('popup.js');
+
+for (const forbidden of ['chrome.proxy', 'proxy_required', 'ipProtection', 'proxyHost', 'proxyPort', 'proxyScheme']) {
+  assert.ok(!backgroundSource.includes(forbidden), 'background contains removed proxy surface: ' + forbidden);
+  assert.ok(!injectSource.includes(forbidden), 'inject contains removed proxy surface: ' + forbidden);
+  assert.ok(!popupSource.includes(forbidden), 'popup contains removed proxy surface: ' + forbidden);
+}
+
+for (const marker of [
+  'networkPrivacy',
+  'HARDENED_PRIVACY_ITEMS',
+  'websites.topicsEnabled',
+  'websites.fledgeEnabled',
+  'websites.adMeasurementEnabled',
+  'services.passwordSavingEnabled',
+]) {
+  assert.ok(backgroundSource.includes(marker), 'background missing hardened privacy control: ' + marker);
+}
+
+assert.ok(injectSource.includes('const strictIpLock = true;'), 'WebRTC must be hard-blocked in direct privacy mode');
+assert.ok(injectSource.includes('WebTransport disabled by Privacy Shield.'), 'WebTransport must be hard-blocked in the page world');
+assert.ok(popupSource.includes('Direct Network Privacy'), 'popup must explain direct-connection privacy semantics');
+assert.ok(popupSource.includes('Visible to destination'), 'popup must not falsely claim direct-IP anonymity');
+
+console.log('Privacy Shield v3.0 static validation passed.');
