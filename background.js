@@ -291,6 +291,7 @@ const TOR_KILL_SWITCH_PRIORITY = 20000;
 const VALID_TOR_PORTS = new Set([9050, 9150]);
 
 function torProxyConfig(port) {
+  if (!VALID_TOR_PORTS.has(port)) throw new Error('Unsupported local Tor port.');
   return {
     mode: 'fixed_servers',
     rules: {
@@ -311,12 +312,12 @@ function proxyServerIsLocalTor(server, port) {
 }
 
 function isOurTorProxy(value, port = 9050) {
-  if (!value || value.mode !== 'fixed_servers') return false;
+  if (!value || value.mode !== 'fixed_servers' || !VALID_TOR_PORTS.has(port)) return false;
   const rules = value.rules || {};
-  const server = rules.singleProxy || rules.proxyForHttp || rules.proxyForHttps;
-  return proxyServerIsLocalTor(server, port) &&
-    !rules.fallbackProxy &&
-    !rules.bypassList?.length;
+  if (!rules.singleProxy || !proxyServerIsLocalTor(rules.singleProxy, port)) return false;
+  if (rules.proxyForHttp || rules.proxyForHttps || rules.fallbackProxy) return false;
+  if (Array.isArray(rules.bypassList) && rules.bypassList.length) return false;
+  return Object.keys(rules).every((key) => key === 'singleProxy');
 }
 
 async function getCurrentProxy(incognito = false) {
@@ -328,10 +329,18 @@ async function getCurrentProxy(incognito = false) {
 }
 
 async function verifyTorPath(port) {
-  const currentProxy = await getCurrentProxy();
-  if (!isOurTorProxy(currentProxy?.value, port)) {
-    return { verified: false, reason: 'configured_proxy_inactive' };
+  const currentProxy = await getCurrentProxy(false);
+  if (
+    !isOurTorProxy(currentProxy?.value, port) ||
+    currentProxy?.levelOfControl !== 'controlled_by_this_extension'
+  ) {
+    return { verified: false, reason: 'proxy_not_controlled_by_extension' };
   }
+
+  // DNR kill-switch blocks all web fetches, including service-worker fetch().
+  // Verify only after confirming that Chrome is controlled by this extension's
+  // exact localhost SOCKS5 config and that the proxy has no direct fallback.
+  await setTorKillSwitch(false);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -395,7 +404,7 @@ async function setTorKillSwitch(enabled) {
           priority: TOR_KILL_SWITCH_PRIORITY,
           action: { type: 'block' },
           condition: {
-            regexFilter: '^https?://',
+            regexFilter: '^(https?|wss?):',
           },
         }],
       });
@@ -586,8 +595,14 @@ if (chrome.proxy?.settings?.onChange) {
   chrome.proxy.settings.onChange.addListener(() => {
     getSettings().then(async (settings) => {
       if (!settings.enabled || settings.networkPrivacy?.mode !== 'local_tor') return;
-      const current = await getCurrentProxy();
-      if (!isOurTorProxy(current.value, settings.networkPrivacy.torPort)) {
+      const current = await getCurrentProxy(false);
+      const incognitoAllowed = chrome.extension?.isAllowedIncognitoAccess
+        ? await chrome.extension.isAllowedIncognitoAccess().catch(() => false)
+        : false;
+      const incognito = await getCurrentProxy(true);
+      const regularOk = isOurTorProxy(current.value, settings.networkPrivacy.torPort);
+      const incognitoOk = !incognitoAllowed || isOurTorProxy(incognito.value, settings.networkPrivacy.torPort);
+      if (!regularOk || !incognitoOk) {
         await applyNetworkProxy();
       }
     }).catch((err) => console.error('[PrivacyShield] Tor proxy state sync failed:', err));
