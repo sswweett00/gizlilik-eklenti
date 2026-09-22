@@ -78,6 +78,10 @@ assert.ok(
   networkRules.some((rule) => rule.action?.type === 'block' && rule.condition?.resourceTypes?.includes('ping')),
   'beacon/ping telemetry must be blocked in hardened network mode'
 );
+assert.ok(
+  networkRules.some((rule) => rule.action?.type === 'block' && rule.condition?.resourceTypes?.includes('websocket')),
+  'WebSocket must be blocked in hardened network mode'
+);
 
 const backgroundSource = read('background.js');
 const injectSource = read('inject.js');
