@@ -185,6 +185,7 @@ async function applyDirectPrivacyPolicy() {
 }
 
 async function getNetworkPrivacyStatus() {
+  const settings = await getSettings();
   const values = {};
   for (const [key, setting] of HARDENED_PRIVACY_ITEMS()) {
     try {
