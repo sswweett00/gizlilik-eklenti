@@ -3,6 +3,13 @@ import type { ExtensionModules, ExtensionSettings, ExtensionSettingsPatch, Expor
 import { isValidTimeZone, uniqueDomains } from './utils';
 
 const STORAGE_KEY = 'settings';
+const LOCAL_TOR_FORCED_MODULES: ReadonlyArray<keyof ExtensionModules> = [
+  'webrtc',
+  'network',
+  'permissions',
+  'geolocation',
+  'browserPrivacy',
+];
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   enabled: true,
   securityMode: DEFAULT_SECURITY_MODE,
@@ -40,6 +47,11 @@ export function normalizeSettings(input: Partial<ExtensionSettings> | null | und
     excludedDomains:uniqueDomains(raw.excludedDomains),
     networkPrivacy:{ mode: raw.networkPrivacy?.mode === 'local_tor' ? 'local_tor' : 'direct_hardened', torPort: raw.networkPrivacy?.torPort === 9150 ? 9150 : 9050 },
   };
+  if (normalized.enabled && normalized.networkPrivacy.mode === 'local_tor') {
+    for (const module of LOCAL_TOR_FORCED_MODULES) normalized.modules[module] = true;
+    normalized.geolocationMode = 'deny';
+  }
+
   return normalized;
 }
 export async function loadSettings(): Promise<ExtensionSettings> {
