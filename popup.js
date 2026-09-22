@@ -47,6 +47,7 @@ const moduleCards        = document.querySelectorAll('.module-card');
 let currentSettings = null;
 let activeTabInfo = null;
 let saveTimer = null;
+let saveRevision = 0;
 
 // ─── Initialization ───────────────────────────────────────────────────────────
 
@@ -375,21 +376,33 @@ resetBtn.addEventListener('click', async () => {
 
 function scheduleSave() {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveSettings, 300);
+  const revision = ++saveRevision;
+  saveTimer = setTimeout(() => { void saveSettings(revision); }, 300);
 }
 
-async function saveSettings() {
+function cloneSettings(settings) {
+  return typeof structuredClone === 'function'
+    ? structuredClone(settings)
+    : JSON.parse(JSON.stringify(settings));
+}
+
+async function saveSettings(revision = saveRevision) {
   if (!currentSettings) return;
+  const payload = cloneSettings(currentSettings);
   try {
-    const response = await sendMessage({ type: 'UPDATE_SETTINGS', settings: currentSettings });
-    if (response.success) {
+    const response = await sendMessage({ type: 'UPDATE_SETTINGS', settings: payload });
+    if (revision !== saveRevision) return;
+    if (response?.success) {
       currentSettings = response.settings;
-      // Refresh status panel after save
       const statusResponse = await sendMessage({ type: 'GET_STATUS' });
       if (statusResponse.success) renderStatus(statusResponse.status);
+    } else {
+      console.error('[PrivacyShield Popup] Save rejected:', response?.error || 'unknown error');
     }
   } catch (err) {
-    console.error('[PrivacyShield Popup] Save error:', err);
+    if (revision === saveRevision) {
+      console.error('[PrivacyShield Popup] Save error:', err);
+    }
   }
 }
 
