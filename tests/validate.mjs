@@ -119,7 +119,10 @@ assert.ok(backgroundSource.includes('chrome.proxy.settings.set'), 'background mu
 assert.ok(backgroundSource.includes("mode: 'local_tor'"), 'background must support local Tor mode');
 assert.ok(backgroundSource.includes("scheme: 'socks5'"), 'local Tor mode must use SOCKS5');
 assert.ok(backgroundSource.includes('127.0.0.1'), 'local Tor mode must target localhost only');
-assert.ok(!backgroundSource.includes('fallbackProxy'), 'local Tor mode must not use a direct fallback proxy');
+assert.ok(!/fallbackProxy\s*:/.test(backgroundSource), 'local Tor mode must not configure a fallback proxy');
+assert.ok(backgroundSource.includes('TOR_KILL_SWITCH_RULE_ID'), 'local Tor mode must define a network kill-switch');
+assert.ok(backgroundSource.includes("regexFilter: '^https?://'"), 'Tor kill-switch must block direct HTTP(S) traffic');
+assert.ok(backgroundSource.includes('setTorKillSwitch(true)'), 'Tor failures must activate the kill-switch');
 assert.ok(popupSource.includes('Verify Tor'), 'popup must expose Tor verification');
 assert.ok(popupSource.includes('Local Tor'), 'popup must expose local Tor path selection');
 
