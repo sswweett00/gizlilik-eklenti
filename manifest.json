@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Privacy Shield",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "description": "Maximum direct browser privacy hardening plus zero-cost Tor/Tails deployment guidance, verification and OS privacy tooling. No proxy, VPN or Tor dependency inside the extension.",
   "minimum_chrome_version": "128",
   "permissions": [
