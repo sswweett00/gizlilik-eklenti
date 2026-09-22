@@ -1,0 +1,10 @@
+[
+  {
+    "id": 300,
+    "priority": 100,
+    "action": { "type": "block" },
+    "condition": {
+      "resourceTypes": ["webtransport"]
+    }
+  }
+]
