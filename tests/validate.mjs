@@ -8,7 +8,7 @@ const trackerRules = JSON.parse(read('rules/trackers.json'));
 const networkRules = JSON.parse(read('rules/network.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.2.0');
+assert.equal(manifest.version, '4.3.0');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs']
@@ -115,10 +115,10 @@ assert.ok(injectSource.includes("securityMode: 'maximum_direct'"), 'injector mus
 assert.ok(injectSource.includes('crypto.getRandomValues'), 'identity seed must prefer Web Crypto entropy');
 assert.ok(injectSource.includes('const actualUA = String(navigator.userAgent || \'\');'), 'page identity must derive from native UA');
 assert.ok(!injectSource.includes('const fakeUAData ='), 'Client Hints must not be replaced with a cross-platform fake profile');
-assert.ok(backgroundSource.includes('function buildHeadersForProfile()'), 'header builder must exist');
-assert.ok(backgroundSource.includes('return [];'), 'per-tab header spoofing must be disabled to preserve first-request coherence');
 assert.ok(!backgroundSource.includes("{ header: 'User-Agent', operation: 'set'"), 'session rules must not rewrite User-Agent');
 assert.ok(!backgroundSource.includes("{ header: 'Accept-Language', operation: 'set'"), 'session rules must not rewrite Accept-Language');
+assert.ok(!backgroundSource.includes('SESSION_RULE_ID_BASE'), 'legacy session header engine must be removed');
+assert.ok(!backgroundSource.includes('buildHeadersForProfile'), 'legacy per-tab header builder must be removed');
 assert.ok(injectSource.includes("defProp(Navigator.prototype, 'gpu'"), 'WebGPU must be blocked in maximum direct mode');
 assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must disable DNS prefetch hints');
 assert.ok(backgroundSource.includes("type !== 'webtransport' && type !== 'ping'"), 'site exceptions must not bypass critical transport/privacy blocks');
@@ -132,13 +132,20 @@ for (const path of [
   'scripts/linux/privacy-audit.sh',
   'scripts/windows/privacy-audit.ps1',
   'scripts/macos/privacy-audit.sh',
+  'scripts/qubes/aegis-configure.sh',
+  'scripts/qubes/aegis-audit.sh',
+  'scripts/qubes/aegis-install-whonix.sh',
   'docs/BROWSERLEAKS_REMEDIATION.md',
+  'docs/AEGIS9_ARCHITECTURE.md',
 ]) {
   const source = read(path);
   assert.ok(source.length > 200, 'deployment/security asset must be non-empty: ' + path);
 }
 
 assert.ok(read('docs/ZERO_COST_DEPLOYMENT.md').includes('Tails'), 'deployment guide must include Tails');
+assert.ok(read('docs/AEGIS9_ARCHITECTURE.md').includes('whonix-workstation-18-dvm'), 'AEGIS architecture must define the Whonix disposable template');
+assert.ok(read('scripts/qubes/aegis-configure.sh').includes('default_dispvm whonix-workstation-18-dvm'), 'Qubes hardening must set the Whonix disposable template');
+assert.ok(read('scripts/qubes/aegis-install-whonix.sh').includes('whonix-gateway-18 whonix-workstation-18'), 'Qubes installer must target supported Whonix 18 templates');
 assert.ok(read('docs/BROWSERLEAKS_REMEDIATION.md').includes('JA3/JA4'), 'BrowserLeaks matrix must document TLS fingerprint boundary');
 assert.ok(read('docs/BROWSERLEAKS_REMEDIATION.md').includes('Public IP'), 'BrowserLeaks matrix must document network IP boundary');
 assert.ok(read('docs/ZERO_COST_DEPLOYMENT.md').includes('Tor Browser'), 'deployment guide must include Tor Browser');
