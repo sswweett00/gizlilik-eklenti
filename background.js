@@ -92,13 +92,6 @@ chrome.runtime.onStartup.addListener(async () => {
 
 // ─── Privacy API Settings ─────────────────────────────────────────────────────
 
-const PRIVACY_ITEMS = () => [
-  chrome.privacy.network.webRTCIPHandlingPolicy,
-  chrome.privacy.network.networkPredictionEnabled,
-  chrome.privacy.websites.hyperlinkAuditingEnabled,
-  chrome.privacy.websites.referrersEnabled,
-  chrome.privacy.websites.thirdPartyCookiesAllowed,
-];
 
 function privacyModuleForKey(key) {
   if (key === 'network.webRTCIPHandlingPolicy') return 'webrtc';
@@ -225,11 +218,6 @@ const HARDENED_PRIVACY_ITEMS = () => [
   ['services.passwordSavingEnabled', chrome.privacy.services.passwordSavingEnabled, false],
 ];
 
-async function applyDirectPrivacyPolicy() {
-  return applyPrivacySettings();
-}
-
-
 async function getNetworkPrivacyStatus() {
   const settings = await getSettings();
   const values = {};
@@ -260,9 +248,6 @@ async function getNetworkPrivacyStatus() {
 }
 
 // ─── Static Rulesets ───────────────────────────────────────────────────────────
-
-const HEADER_RULESET_ID = 'header_rules';
-const TRACKER_RULESET_ID = 'tracker_rules';
 
 async function applyRuleSets() {
   const s = await getSettings();
@@ -377,14 +362,6 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   unregisterTab(tabId).catch(() => {});
 });
 
-function buildAcceptLanguage(languages) {
-  return languages
-    .map(
-      (lang, i) =>
-        i === 0 ? lang : `${lang};q=${Math.max(0.1, 1 - i * 0.1).toFixed(1)}`
-    )
-    .join(',');
-}
 
 // ─── Message Handling ─────────────────────────────────────────────────────────
 
