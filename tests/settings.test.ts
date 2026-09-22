@@ -23,6 +23,17 @@ describe('Privacy Shield settings', () => {
     expect(normalized.modules.network).toBe(true);
   });
 
+  it('forces anonymous-only Tor networking even when direct mode is requested', () => {
+    const normalized = normalizeSettings({
+      enabled: false,
+      networkPrivacy: { mode: 'direct_hardened', torPort: 9050 } as any,
+    } as any);
+
+    expect(normalized.enabled).toBe(true);
+    expect(normalized.networkPrivacy.mode).toBe('local_tor');
+    expect(normalized.networkPrivacy.torPort).toBe(9050);
+  });
+
   it('rejects invalid timezones', () => {
     expect(normalizeSettings({ timezone: 'Not/A/Timezone' }).timezone).toBe('auto');
     expect(normalizeSettings({ timezone: 'Europe/Istanbul' }).timezone).toBe('Europe/Istanbul');
