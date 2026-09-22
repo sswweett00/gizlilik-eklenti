@@ -10,7 +10,7 @@ const adRules = JSON.parse(read('rules/adblock.json'));
 const urlRules = JSON.parse(read('rules/url-cleaner.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.5.0');
+assert.equal(manifest.version, '4.5.1');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'declarativeNetRequestFeedback', 'storage', 'tabs', 'contentSettings']
@@ -47,6 +47,8 @@ assert.ok(headerRules[0].action.requestHeaders.some((h) => h.header === 'Referer
 assert.ok(headerSource.includes('en-US,en;q=0.9'), 'Accept-Language must use the standardized locale profile');
 
 const background = read('background.js');
+assert.ok(background.includes('function enqueue('), 'background must define enqueue before use');
+assert.ok(background.includes('await enqueue(() => rebuildAllSessionRules());'), 'background must serialize session-rule rebuilds');
 for (const marker of [
   'applySiteExceptionRules',
   'settingsRequireReload',
@@ -80,7 +82,11 @@ assert.equal(manifest.content_security_policy?.extension_pages, "script-src 'sel
 assert.ok(!backgroundSource.includes('chrome.storage.sync'), 'settings must remain local-only');
 assert.ok(backgroundSource.includes("wanted.push('ad_rules')"), 'background must enable ad rules');
 assert.ok(backgroundSource.includes("wanted.push('url_rules')"), 'background must enable URL rules');
-assert.ok(urlRules.some((rule) => rule.action?.type === 'redirect' && rule.action?.redirect?.transform?.queryTransform?.removeParams?.includes('fbclid')), 'URL cleaner must remove fbclid');
+assert.ok(urlRules.length >= 18, 'URL cleaner must split tracking matching into small rules');
+assert.ok(urlRules.every((rule) => typeof rule.condition?.regexFilter === 'string'), 'URL cleaner rules must use explicit regex filters');
+assert.ok(urlRules.every((rule) => rule.condition.regexFilter.length < 256), 'URL cleaner regex filters must remain small');
+assert.ok(urlRules.some((rule) => rule.condition.regexFilter.includes('fbclid')), 'URL cleaner must match fbclid');
+assert.ok(urlRules.every((rule) => rule.action?.redirect?.transform?.queryTransform?.removeParams?.includes('fbclid')), 'URL cleaner must remove fbclid');
 assert.ok(adRules.some((rule) => rule.action?.type === 'block'), 'ad rules must contain blocking rules');
 assert.ok(
   networkRules.some((rule) => rule.action?.type === 'block' && rule.condition?.resourceTypes?.includes('webtransport')),
