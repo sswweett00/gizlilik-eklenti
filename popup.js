@@ -82,7 +82,7 @@ function renderUI(settings) {
   // Master toggle
   masterToggle.checked = settings.enabled;
 
-  updateGlobalStatusIndicator(settings.enabled);
+  updateGlobalStatusIndicator(settings.enabled, settings.modules);
   document.body.classList.toggle('shield-disabled', !settings.enabled);
 
   masterToggle.disabled = false;
@@ -124,12 +124,24 @@ function renderNetworkPrivacyStatus(status) {
   const mode = status?.networkPrivacy;
   if (!mode) return;
 
-  if (ipLockDot) ipLockDot.className = 'ip-lock-dot protected';
-  if (ipLockTitle) ipLockTitle.textContent = 'Direct connection hardened';
+  if (!mode.enabled) {
+    if (ipLockDot) ipLockDot.className = 'ip-lock-dot';
+    if (ipLockTitle) ipLockTitle.textContent = 'Protection disabled';
+    if (ipLockSub) ipLockSub.textContent = 'Privacy Shield is currently disabled.';
+    return;
+  }
+
+  const active = !!mode.networkModuleEnabled || !!mode.webrtcModuleEnabled || !!mode.browserPrivacyModuleEnabled;
+  if (ipLockDot) ipLockDot.className = active ? 'ip-lock-dot protected' : 'ip-lock-dot';
+  if (ipLockTitle) ipLockTitle.textContent = active ? 'Direct connection hardened' : 'Network hardening disabled';
   if (ipLockSub) {
-    ipLockSub.textContent = mode.sourceIpVisibility === 'direct_connection_visible'
-      ? 'Geolocation is denied and common IP-location lookups are blocked, but the destination still sees the direct public IP and can geolocate it.'
-      : 'Network privacy hardening is active.';
+    if (!active) {
+      ipLockSub.textContent = 'Network, WebRTC and browser-level privacy modules are disabled.';
+    } else if (mode.sourceIpVisibility === 'direct_connection_visible') {
+      ipLockSub.textContent = 'WebRTC/IP-location surfaces are hardened, but a direct connection still exposes the public source IP to the destination.';
+    } else {
+      ipLockSub.textContent = 'Network privacy hardening is active.';
+    }
   }
 }
 
@@ -164,9 +176,27 @@ function renderErrorState() {
   statusDot.className = 'status-dot inactive';
 }
 
-function updateGlobalStatusIndicator(enabled) {
-  statusDot.className = `status-dot ${enabled ? 'active' : 'inactive'}`;
-  statusLabel.textContent = enabled ? 'Protected' : 'Disabled';
+function updateGlobalStatusIndicator(enabled, modules = {}) {
+  const total = Object.keys(modules).length;
+  const active = Object.values(modules).filter(Boolean).length;
+
+  if (!enabled) {
+    statusDot.className = 'status-dot inactive';
+    statusLabel.textContent = 'Disabled';
+    return;
+  }
+  if (active === 0) {
+    statusDot.className = 'status-dot inactive';
+    statusLabel.textContent = 'No modules';
+    return;
+  }
+  if (total > 0 && active < total) {
+    statusDot.className = 'status-dot partial';
+    statusLabel.textContent = 'Partial';
+    return;
+  }
+  statusDot.className = 'status-dot active';
+  statusLabel.textContent = 'Protected';
 }
 
 function updateModuleCardState(card, enabled) {
@@ -274,7 +304,7 @@ rotateIdentityBtn?.addEventListener('click', async () => {
 masterToggle.addEventListener('change', () => {
   if (!currentSettings) return;
   currentSettings.enabled = masterToggle.checked;
-  updateGlobalStatusIndicator(currentSettings.enabled);
+  updateGlobalStatusIndicator(currentSettings.enabled, currentSettings.modules);
   updateActiveModulesCount(currentSettings);
   document.body.classList.toggle('shield-disabled', !currentSettings.enabled);
   scheduleSave();
