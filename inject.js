@@ -514,6 +514,25 @@
 
     // WebRTC is fully disabled in direct hardened mode, so no SDP mutation
     // or setLocalDescription overload patch is necessary.
+    if (navigator.mediaDevices) {
+      try {
+        defProp(MediaDevices.prototype, 'getUserMedia', {
+          value: markNative(function getUserMedia() {
+            return Promise.reject(new DOMException('Media capture disabled by Privacy Shield.', 'NotAllowedError'));
+          }, 'getUserMedia'),
+          writable: true,
+        });
+      } catch (_) {}
+      try {
+        defProp(MediaDevices.prototype, 'getDisplayMedia', {
+          value: markNative(function getDisplayMedia() {
+            return Promise.reject(new DOMException('Display capture disabled by Privacy Shield.', 'NotAllowedError'));
+          }, 'getDisplayMedia'),
+          writable: true,
+        });
+      } catch (_) {}
+    }
+
     if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
       Object.defineProperty(navigator.mediaDevices, 'enumerateDevices', {
         value: markNative(() => Promise.resolve([]), 'enumerateDevices'),
@@ -534,6 +553,16 @@
         defProp(navigator, 'gpu', { get: function () { return undefined; } });
       } catch (_) {}
     } catch (_) {}
+
+    if (window.EventSource) {
+      const NativeEventSource = window.EventSource;
+      const BlockedEventSource = function EventSource() {
+        throw new DOMException('EventSource disabled by Privacy Shield.', 'NotAllowedError');
+      };
+      BlockedEventSource.prototype = NativeEventSource.prototype;
+      markNative(BlockedEventSource, 'EventSource');
+      window.EventSource = BlockedEventSource;
+    }
 
     if (window.WebSocket) {
       const NativeWebSocket = window.WebSocket;
