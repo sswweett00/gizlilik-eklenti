@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Privacy Shield 4.8 is a Chromium-first privacy-hardening extension with a single Tor-only network posture when the extension is active. The Local Tor mode uses Chromium's proxy API to point the browser at a locally running Tor SOCKS5 endpoint; no paid VPN or remote proxy service is required.
+Privacy Shield 4.9 is a Chromium-first privacy-hardening extension with a single Tor-only network posture when the extension is active. The Local Tor mode uses Chromium's proxy API to point the browser at a locally running Tor SOCKS5 endpoint; no paid VPN or remote proxy service is required.
 
 The extension never normalizes an active configuration to a direct network path. Local Tor changes the network path by making Chromium use a local SOCKS5 Tor endpoint. If the endpoint is unavailable, Privacy Shield keeps the kill-switch active and does not configure a direct fallback proxy.
 
@@ -141,7 +141,7 @@ Recommended runtime validation matrix: Chrome stable/Beta/Chromium on Windows, L
 
 ## Conclusion
 
-Privacy Shield 4.8 is a browser privacy hardener with an optional localhost Tor egress path. Direct Hardened mode provides leak resistance without changing the source IP; Local Tor changes the network path and deliberately avoids direct fallback. Neither mode should be treated as a complete substitute for Tor Browser or a system-wide anonymous networking stack.
+Privacy Shield 4.9 is a browser privacy hardener with mandatory localhost Tor egress while active. Direct networking is not an available normalized configuration, and the browser remains fail-closed until Tor is verified. It is still not a complete substitute for Tor Browser or a system-wide anonymous networking stack.
 
 
 ## AEGIS-9 system profile
