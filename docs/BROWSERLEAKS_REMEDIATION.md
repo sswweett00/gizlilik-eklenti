@@ -1,12 +1,12 @@
-# BrowserLeaks Remediation Matrix — Privacy Shield 4.3.2
+# BrowserLeaks Remediation Matrix — Privacy Shield 4.8
 
 This document maps the fields observed in BrowserLeaks-style diagnostics to the layer that can actually control them.
 
 | BrowserLeaks signal | Extension | Tor/Tails | Notes |
 | --- | --- | --- | --- |
-| Public IP | No | Yes | A direct TCP/QUIC connection always exposes its source IP to the destination. |
-| IP geolocation | Partly | Yes | Third-party IP-geolocation APIs can be blocked, but the destination still sees the direct source IP and can geolocate it server-side. |
-| ISP / ASN | No | Yes | The destination can infer the network owner of the source IP. |
+| Public IP | Direct: No · Local Tor: network-path change | Yes | Direct mode exposes the source IP; Local Tor routes Chromium through localhost SOCKS5 Tor with no direct fallback when active. |
+| IP geolocation | Direct: Partly · Local Tor: strongly reduced | Yes | Direct mode blocks common lookup APIs but the destination can geolocate the source IP; Local Tor changes the source IP presented to the destination. |
+| ISP / ASN | Direct: No · Local Tor: Tor exit ISP/ASN | Yes | Direct mode exposes the user's network owner. Local Tor changes the visible network owner to the Tor exit. |
 | Hostname of public IP | No | Yes | Reverse DNS belongs to the visible network address. |
 | WebRTC local/public IP | Yes | Yes | Privacy Shield hard-blocks page WebRTC and Chrome WebRTC policy. |
 | DNS resolver visibility | Partly | Yes | Browser hardening helps; a complete anonymous network path requires Tor/Tails or equivalent. |
@@ -30,9 +30,9 @@ This document maps the fields observed in BrowserLeaks-style diagnostics to the 
 
 Privacy Shield now hard-denies the browser Geolocation API and blocks common third-party IP-geolocation API endpoints. This prevents many page-side lookup shortcuts, but it cannot prevent the website that receives the connection from geolocating the source public IP.
 
-## The critical conclusion
+## Network-path conclusion
 
-The BrowserLeaks output in a direct Chromium session cannot be made completely anonymous by changing JavaScript values.
+A direct Chromium session cannot be made network-anonymous by changing JavaScript values. Local Tor mode changes the network path, but BrowserLeaks can still observe Chromium-specific fingerprint and behavior signals that are outside the extension's control.
 
 In particular:
 
@@ -40,6 +40,6 @@ In particular:
 2. JA3/JA4, TCP/IP and HTTP/2 fingerprints are below the extension's control boundary.
 3. Cross-platform UA spoofing is harmful when it disagrees with Client Hints and the underlying network stack.
 4. The strongest zero-cost website-facing anonymity stack is native Tails + MAC anonymization + Tor + Tor Browser.
-5. Privacy Shield 4.1 is a maximum Chromium hardening layer, not a replacement for Tor Browser.
+5. Privacy Shield 4.8 Local Tor is a Chromium network-path integration plus hardening layer, not a replacement for Tor Browser.
 
 Tor Project explicitly recommends Tor Browser rather than routing an ordinary browser through Tor because other browsers can expose real IP/DNS/WebRTC information and have different fingerprint/cookie/cache behavior.
