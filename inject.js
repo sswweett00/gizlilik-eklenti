@@ -210,12 +210,20 @@
       }
     } catch (_) {}
 
-    // Generate a fresh random seed for this tab
-    // Mix Math.random() with performance.now() and Date.now() for entropy
-    const entropy = (Math.random() * 0xFFFFFFFF) ^
-                    (performance.now() * 1000) ^
-                    (Date.now() & 0xFFFFFFFF);
-    const seed = (entropy >>> 0) || 0xDEADBEEF;
+    // Generate a fresh unpredictable seed for this tab. Web Crypto is
+    // synchronous here, so it is safe to use during document_start.
+    let seed = 0;
+    try {
+      const random = new Uint32Array(1);
+      crypto.getRandomValues(random);
+      seed = random[0] >>> 0;
+    } catch (_) {}
+    if (!seed) {
+      const entropy = (Math.random() * 0xFFFFFFFF) ^
+                      (performance.now() * 1000) ^
+                      (Date.now() & 0xFFFFFFFF);
+      seed = (entropy >>> 0) || 0xA7F31C29;
+    }
 
     // Build per-module PRNGs from the same seed (XOR with different constants)
     const rng  = mulberry32(seed);
@@ -331,7 +339,8 @@
 
   // Non-flag preferences pushed from the background via bridge.js.
   const PREF_DEFAULTS = {
-    geolocationMode: 'spoof', // 'deny' | 'spoof' (per-tab city) | 'custom'
+    securityMode: 'maximum_direct',
+    geolocationMode: 'deny',
     timezone: 'auto',        // 'auto' = per-tab timezone
     spoofedLocation: null,   // { latitude, longitude } used by 'custom' mode
     excludedDomains: [],
@@ -359,7 +368,11 @@
     });
   }
 
-  const on = (mod) => _modules.enabled && _modules[mod] !== false && !isExcludedHost();
+  const on = (mod) => {
+    if (!_modules.enabled || _modules[mod] === false) return false;
+    if (_prefs.securityMode === 'maximum_direct') return true;
+    return !isExcludedHost();
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 5: NATIVE toString SHIELD (anti-proxy-detection)
@@ -834,8 +847,8 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('navigator') && navigator.userAgentData) {
-    const fakeUAData = {
-      brands:   TAB.uaBrands,
+    const fakeUAData = Object.freeze({
+      brands:   Object.freeze(TAB.uaBrands.map((b) => Object.freeze({ ...b }))),
       mobile:   TAB.uaMobile,
       platform: TAB.uaPlatform,
 
@@ -862,7 +875,7 @@
       toJSON: markNative(function toJSON() {
         return { brands: TAB.uaBrands, mobile: TAB.uaMobile, platform: TAB.uaPlatform };
       }, 'toJSON'),
-    };
+    });
 
     try {
       defProp(Navigator.prototype, 'userAgentData', { get: function () { return fakeUAData; } });
