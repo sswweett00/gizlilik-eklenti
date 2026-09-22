@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS = {
     geolocation: true,
     timezone: true,
     headers: true,
+    permissions: true,
   },
   timezone: 'auto', // 'auto' = unique per-tab timezone from the city pool
   geolocationMode: 'spoof', // 'deny' | 'spoof' (per-tab city) | 'custom'
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS = {
     longitude: -74.0060,
     accuracy: 15,
   },
+  excludedDomains: [],
 };
 
 // Settings subset that content scripts are allowed to see
@@ -44,6 +46,7 @@ function publicSettings(s) {
     timezone: s.timezone,
     geolocationMode: s.geolocationMode,
     spoofedLocation: s.spoofedLocation,
+    excludedDomains: s.excludedDomains,
   };
 }
 
@@ -53,15 +56,14 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('[PrivacyShield] Installed:', details.reason);
 
   const stored = await chrome.storage.sync.get('settings');
-  const merged = stored.settings
-    ? deepMerge(DEFAULT_SETTINGS, stored.settings)
-    : DEFAULT_SETTINGS;
+  const merged = normalizeSettings(stored.settings || DEFAULT_SETTINGS);
   if (JSON.stringify(merged) !== JSON.stringify(stored.settings || null)) {
     await chrome.storage.sync.set({ settings: merged });
   }
 
   await applyPrivacySettings();
   await applyRuleSets();
+  await applySiteExceptionRules();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
@@ -69,6 +71,7 @@ chrome.runtime.onStartup.addListener(async () => {
   await resetTabTracking();
   await applyPrivacySettings();
   await applyRuleSets();
+  await applySiteExceptionRules();
 });
 
 // ─── Privacy API Settings ─────────────────────────────────────────────────────
@@ -167,7 +170,7 @@ const MAX_SESSION_RULES = 900; // DNR hard limit is 1000
 
 const RESOURCE_TYPES = [
   'main_frame', 'sub_frame', 'xmlhttprequest', 'script',
-  'stylesheet', 'image', 'font', 'object', 'media', 'other',
+  'stylesheet', 'image', 'font', 'object', 'media', 'ping', 'websocket', 'other',
 ];
 
 async function getTabStore() {
@@ -438,6 +441,152 @@ function buildAcceptLanguage(languages) {
 
 // ─── Message Handling ─────────────────────────────────────────────────────────
 
+const SITE_RULE_ID_BASE = 10000;
+const SITE_RULE_PRIORITY = 10000;
+
+async function applySiteExceptionRules() {
+  const settings = await getSettings();
+  const domains = settings.excludedDomains || [];
+  try {
+    const current = await chrome.declarativeNetRequest.getDynamicRules();
+    const ours = current
+      .filter((rule) => rule.id >= SITE_RULE_ID_BASE && rule.id < SITE_RULE_ID_BASE + 200)
+      .map((rule) => rule.id);
+
+    const addRules = [];
+    domains.slice(0, 100).forEach((domain, index) => {
+      const requestRuleId = SITE_RULE_ID_BASE + index * 2;
+      const initiatorRuleId = requestRuleId + 1;
+
+      addRules.push({
+        id: requestRuleId,
+        priority: SITE_RULE_PRIORITY,
+        action: { type: 'allow' },
+        condition: {
+          requestDomains: [domain],
+          resourceTypes: RESOURCE_TYPES.concat(['ping', 'websocket']),
+        },
+      });
+
+      addRules.push({
+        id: initiatorRuleId,
+        priority: SITE_RULE_PRIORITY,
+        action: { type: 'allow' },
+        condition: {
+          initiatorDomains: [domain],
+          resourceTypes: RESOURCE_TYPES.concat(['ping', 'websocket']),
+        },
+      });
+    });
+
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: ours,
+      addRules,
+    });
+  } catch (err) {
+    console.error('[PrivacyShield] Site exception rules failed:', err);
+  }
+}
+
+function normalizeDomain(value) {
+  if (typeof value !== 'string') return null;
+  let domain = value.trim().toLowerCase();
+  try {
+    if (domain.includes('://')) domain = new URL(domain).hostname.toLowerCase();
+  } catch (_) {
+    return null;
+  }
+  domain = domain.replace(/^\.+|\.+$/g, '');
+  if (!domain || domain.length > 253 || domain.includes('/') || domain.includes(':')) return null;
+  if (domain === 'localhost') return domain;
+  if (!/^[a-z0-9.-]+$/.test(domain)) return null;
+  const labels = domain.split('.');
+  if (labels.some((label) => !label || label.length > 63 || label.startsWith('-') || label.endsWith('-'))) {
+    return null;
+  }
+  return domain;
+}
+
+function isValidTimeZone(value) {
+  if (value === 'auto') return true;
+  if (typeof value !== 'string' || value.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value }).format();
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function sanitizeIncomingSettings(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+
+  const out = {};
+
+  if (typeof raw.enabled === 'boolean') out.enabled = raw.enabled;
+
+  if (raw.modules && typeof raw.modules === 'object' && !Array.isArray(raw.modules)) {
+    out.modules = {};
+    for (const key of Object.keys(DEFAULT_SETTINGS.modules)) {
+      if (typeof raw.modules[key] === 'boolean') out.modules[key] = raw.modules[key];
+    }
+  }
+
+  if (typeof raw.timezone === 'string' && isValidTimeZone(raw.timezone)) {
+    out.timezone = raw.timezone;
+  }
+
+  if (typeof raw.geolocationMode === 'string' &&
+      ['deny', 'spoof', 'custom'].includes(raw.geolocationMode)) {
+    out.geolocationMode = raw.geolocationMode;
+  }
+
+  if (raw.spoofedLocation && typeof raw.spoofedLocation === 'object' && !Array.isArray(raw.spoofedLocation)) {
+    const la = Number(raw.spoofedLocation.latitude);
+    const lo = Number(raw.spoofedLocation.longitude);
+    const accuracy = Number(raw.spoofedLocation.accuracy);
+    out.spoofedLocation = {
+      latitude: Number.isFinite(la) ? Math.min(90, Math.max(-90, la)) : DEFAULT_SETTINGS.spoofedLocation.latitude,
+      longitude: Number.isFinite(lo) ? Math.min(180, Math.max(-180, lo)) : DEFAULT_SETTINGS.spoofedLocation.longitude,
+      accuracy: Number.isFinite(accuracy) ? Math.min(10000, Math.max(1, accuracy)) : DEFAULT_SETTINGS.spoofedLocation.accuracy,
+    };
+  }
+
+  if (Array.isArray(raw.excludedDomains)) {
+    out.excludedDomains = [...new Set(raw.excludedDomains.map(normalizeDomain).filter(Boolean))].slice(0, 100);
+  }
+
+  return out;
+}
+
+function normalizeSettings(raw) {
+  return deepMerge(DEFAULT_SETTINGS, sanitizeIncomingSettings(raw || {}));
+}
+
+function settingsRequireReload(previous, next) {
+  if (!previous || !next) return true;
+  if (previous.enabled !== next.enabled) return true;
+  if (JSON.stringify(previous.excludedDomains || []) !== JSON.stringify(next.excludedDomains || [])) return true;
+
+  const reloadModules = ['webrtc', 'canvas', 'webgl', 'audio', 'fonts', 'navigator', 'screen', 'permissions'];
+  return reloadModules.some((key) => previous.modules?.[key] !== next.modules?.[key]);
+}
+
+async function reloadProtectionTabs() {
+  const tabs = await chrome.tabs.query({});
+  await Promise.allSettled(
+    tabs
+      .filter((tab) => typeof tab.id === 'number' && typeof tab.url === 'string' && /^(https?|file):/i.test(tab.url))
+      .map((tab) => chrome.tabs.reload(tab.id))
+  );
+}
+
+async function getActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab || null;
+}
+
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     try {
@@ -449,15 +598,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'UPDATE_SETTINGS': {
           const current = await getSettings();
-          const updated = deepMerge(current, sanitizeIncomingSettings(message.settings));
+          const updated = normalizeSettings(deepMerge(current, sanitizeIncomingSettings(message.settings)));
           await chrome.storage.sync.set({ settings: updated });
           sendResponse({ success: true, settings: updated });
           break;
         }
 
         case 'RESET_SETTINGS': {
-          await chrome.storage.sync.set({ settings: DEFAULT_SETTINGS });
-          sendResponse({ success: true, settings: DEFAULT_SETTINGS });
+          const defaults = normalizeSettings(DEFAULT_SETTINGS);
+          await chrome.storage.sync.set({ settings: defaults });
+          sendResponse({ success: true, settings: defaults });
           break;
         }
 
@@ -482,6 +632,64 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           break;
         }
 
+
+
+        case 'GET_ACTIVE_TAB': {
+          const tab = await getActiveTab();
+          const host = tab?.url ? (() => { try { return new URL(tab.url).hostname.toLowerCase(); } catch (_) { return ''; } })() : '';
+          const settings = await getSettings();
+          sendResponse({
+            success: true,
+            tab: tab ? { id: tab.id, url: tab.url || '', title: tab.title || '', host } : null,
+            excluded: !!host && (settings.excludedDomains || []).includes(host),
+          });
+          break;
+        }
+
+        case 'TOGGLE_SITE_EXCLUSION': {
+          const tab = await getActiveTab();
+          if (!tab?.url) {
+            sendResponse({ success: false, error: 'No active tab.' });
+            break;
+          }
+
+          let host = '';
+          try { host = new URL(tab.url).hostname.toLowerCase(); } catch (_) {}
+          const domain = normalizeDomain(host);
+          if (!domain) {
+            sendResponse({ success: false, error: 'This page cannot be excluded.' });
+            break;
+          }
+
+          const current = await getSettings();
+          const excludedDomains = new Set(current.excludedDomains || []);
+          const excluded = !excludedDomains.has(domain);
+          if (excluded) excludedDomains.add(domain);
+          else excludedDomains.delete(domain);
+
+          const updated = normalizeSettings({ ...current, excludedDomains: [...excludedDomains] });
+          await chrome.storage.sync.set({ settings: updated });
+          sendResponse({ success: true, excluded, host: domain, settings: updated });
+          break;
+        }
+
+        case 'ROTATE_IDENTITY': {
+          const tab = await getActiveTab();
+          if (!tab || typeof tab.id !== 'number') {
+            sendResponse({ success: false, error: 'No active tab.' });
+            break;
+          }
+
+          await unregisterTab(tab.id);
+          try {
+            await chrome.tabs.sendMessage(tab.id, { type: 'ROTATE_IDENTITY' });
+          } catch (_) {}
+          try {
+            await chrome.tabs.reload(tab.id);
+          } catch (_) {}
+          sendResponse({ success: true });
+          break;
+        }
         default:
           sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
       }
@@ -493,29 +701,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // Keep message channel open for async response
 });
 
-// Clamp user-supplied values before they reach storage / DNR rules
-function sanitizeIncomingSettings(raw) {
-  if (!raw || typeof raw !== 'object') return {};
-  const out = { ...raw };
-  if (typeof out.timezone === 'string' && out.timezone.length > 64) delete out.timezone;
-  if (out.geolocationMode && !['deny', 'spoof', 'custom'].includes(out.geolocationMode)) {
-    delete out.geolocationMode;
-  }
-  if (out.spoofedLocation) {
-    const la = Number(out.spoofedLocation.latitude);
-    const lo = Number(out.spoofedLocation.longitude);
-    out.spoofedLocation = {
-      latitude: Number.isFinite(la) ? Math.min(90, Math.max(-90, la)) : 40.7128,
-      longitude: Number.isFinite(lo) ? Math.min(180, Math.max(-180, lo)) : -74.006,
-      accuracy: 15,
-    };
-  }
-  return out;
-}
-
+// Settings are normalized at every read so old/corrupted storage cannot bypass validation.
 async function getSettings() {
   const { settings } = await chrome.storage.sync.get('settings');
-  return settings ? deepMerge(DEFAULT_SETTINGS, settings) : DEFAULT_SETTINGS;
+  return settings ? normalizeSettings(settings) : normalizeSettings(DEFAULT_SETTINGS);
 }
 
 // ─── Status Builder ───────────────────────────────────────────────────────────
@@ -538,23 +727,57 @@ async function buildStatus() {
     }
   } catch (_) {}
 
+  let enabledRulesets = [];
+  let sessionRuleCount = 0;
+  let siteExceptionCount = (settings.excludedDomains || []).length;
+  try { enabledRulesets = await chrome.declarativeNetRequest.getEnabledRulesets(); } catch (_) {}
+  try { sessionRuleCount = (await chrome.declarativeNetRequest.getSessionRules()).length; } catch (_) {}
+
+  let activeTab = null;
+  try {
+    const tab = await getActiveTab();
+    if (tab) {
+      let host = '';
+      try { host = new URL(tab.url || '').hostname.toLowerCase(); } catch (_) {}
+      activeTab = {
+        id: tab.id,
+        host,
+        excluded: !!host && (settings.excludedDomains || []).includes(host),
+      };
+    }
+  } catch (_) {}
+
+  const tabProfiles = await getTabStore();
+
   return {
     enabled: settings.enabled,
     modules: settings.modules,
     webrtcPolicy,
     geolocationMode: settings.geolocationMode,
     timezone: settings.timezone,
+    excludedDomains: settings.excludedDomains,
+    enabledRulesets,
+    sessionRuleCount,
+    trackedTabCount: Object.keys(tabProfiles).length,
+    siteExceptionCount,
+    activeTab,
     tabProfile,
   };
 }
 
 // ─── Storage Change Listener ──────────────────────────────────────────────────
 
-async function onSettingsChanged() {
+async function onSettingsChanged(previousSettings, nextSettings) {
+  const settings = nextSettings || await getSettings();
   await applyPrivacySettings();
   await applyRuleSets();
+  await applySiteExceptionRules();
   await enqueue(() => rebuildAllSessionRules());
   await broadcastSettingsToTabs();
+
+  if (settingsRequireReload(previousSettings, settings)) {
+    await reloadProtectionTabs();
+  }
 }
 
 async function broadcastSettingsToTabs() {
@@ -572,7 +795,9 @@ async function broadcastSettingsToTabs() {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'sync' || !changes.settings) return;
   console.log('[PrivacyShield] Settings changed, reapplying...');
-  onSettingsChanged().catch((err) =>
+  const previousSettings = changes.settings.oldValue ? normalizeSettings(changes.settings.oldValue) : null;
+  const nextSettings = normalizeSettings(changes.settings.newValue || {});
+  onSettingsChanged(previousSettings, nextSettings).catch((err) =>
     console.error('[PrivacyShield] Reapply failed:', err)
   );
 });
