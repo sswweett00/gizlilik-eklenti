@@ -1,8 +1,8 @@
-# Privacy Shield 4.3 — Security Architecture
+# Privacy Shield 4.7 — Security Architecture
 
 ## Executive Summary
 
-Privacy Shield 4.3 is a Chromium privacy-hardening extension plus an AEGIS-9 zero-cost system deployment model for direct network connections. It does not configure or depend on a proxy, VPN, or Tor.
+Privacy Shield 4.7 is a Chromium privacy-hardening extension plus an AEGIS-9 zero-cost system deployment model for direct network connections. It does not configure or depend on a proxy, VPN, or Tor.
 
 The system deliberately does not claim to hide the public source IP of a normal direct TCP/QUIC connection. A destination server necessarily receives the network source address of the connection that reaches it. Network-layer anonymity therefore remains outside the capability of a browser extension without an intermediary network path.
 
@@ -15,13 +15,13 @@ The achievable security goal is: reduce browser-side fingerprinting, block major
 1. Main-world injector: inject.js. Runs at document_start and hardens WebRTC, WebTransport, Canvas, WebGL, Audio, DOM geometry, Navigator, Client Hints, Screen, Geolocation, Permissions, and Timezone APIs.
 2. Isolated bridge: bridge.js. Relays profiles and settings between the page world and extension service worker using cryptographically signed settings updates from an isolated-world signing key. The main-world verifier still shares the page JavaScript environment, so the browser's MAIN/ISOLATED trust boundary remains a platform limitation rather than a substitute for a native isolated execution boundary.
 3. Background service worker: background.js. Owns Chrome privacy policies, DNR rules, per-tab identities, validation, site exceptions, rotation, tab lifecycle and status reporting.
-4. Declarative network rules: header_rules, tracker_rules and network_rules. The network ruleset blocks WebTransport and ping/beacon telemetry.
+4. Declarative network rules: header_rules, permission_rules, tracker_rules, ad_rules, network_rules and url_rules. The permission ruleset adds a browser-enforced Permissions-Policy response layer.
 5. Zero-cost deployment assets: OS audit tools and deployment guidance for Windows, Linux, macOS, native Tails, Tor and Tor Browser. Tor/Tails are intentionally external system components; the extension never attempts to impersonate or reimplement them.
 
 ### Data Flow
 
-Navigation -> document_start injector -> bridge profile registration -> service worker -> per-tab DNR session identity -> subsequent requests.
-Settings change -> sync storage -> service worker validation -> privacy APIs/DNR update -> broadcast -> required tab reload.
+Navigation -> document_start injector -> isolated bridge -> service worker profile/status registration -> browser privacy/DNR policy. The first navigation remains native; legacy per-tab header spoofing is no longer used.
+Settings change -> local storage -> service worker validation -> privacy APIs/DNR update -> signed MAIN-world update -> targeted tab reload when required.
 
 ## Threat Model
 
@@ -52,7 +52,7 @@ Controlled settings are snapshotted in session storage and restored when protect
 
 ### Maximum direct mode
 
-The default `maximum_direct` posture forces all browser privacy modules on while the extension master switch is enabled. Geolocation is deny-by-default. Site exceptions do not disable page-world protections in maximum mode, and their DNR allow rules deliberately do not bypass the WebTransport or ping/beacon blocks. Chrome's WebRTC IP handling policy is also set to disable non-proxied UDP. Media-device enumeration is minimized.
+The default `maximum_direct` posture enables the hardened baseline while still allowing the user to toggle individual modules. Geolocation is deny-by-default. Site exceptions do not disable page-world protections in maximum mode, and their DNR allow rules deliberately do not bypass the WebTransport or ping/beacon blocks. Chrome's WebRTC IP handling policy is also set to disable non-proxied UDP. Media-device enumeration is minimized.
 
 ### WebRTC
 
@@ -64,7 +64,7 @@ WebTransport is blocked at the page API boundary and with a DNR rule. HTTP ping/
 
 ### Fingerprint coherence
 
-Per-tab profiles correlate browser version, platform, GPU family, screen size and hardware capacity instead of independently randomizing every property.
+Per-tab profiles correlate browser version, platform, GPU family, screen size and hardware capacity instead of independently randomizing every property. Canvas protection also covers OffscreenCanvas 2D export paths, and Navigator hardening standardizes selected OS media-query preferences exposed through `matchMedia()`.
 
 ### Header coherence
 
@@ -82,7 +82,7 @@ Page JavaScript is treated as hostile. Settings are schema-normalized, profile d
 
 ## System-Level Anonymity Architecture
 
-The extension cannot alter a direct network source IP. When website-visible IP anonymity is required, the recommended zero-cost stack is native Tails with MAC address anonymization, Tor, and Tor Browser. Tor Project explicitly recommends Tor Browser instead of routing another browser through Tor because other browsers can leak real IP/DNS/WebRTC information and expose identifying fingerprint, cookie and cache state.
+The extension cannot alter a direct network source IP. When website-visible IP anonymity is required, use a network-path intermediary such as Tor or a VPN rather than treating browser-side hardening as IP anonymization. Tor Project explicitly recommends Tor Browser instead of routing another browser through Tor because other browsers can leak real IP/DNS/WebRTC information and expose identifying fingerprint, cookie and cache state.
 
 The repository includes `docs/ZERO_COST_DEPLOYMENT.md`, `docs/THREAT_MODEL.md`, `docs/VERIFICATION.md` and platform audit/setup scripts to operationalize this architecture.
 
