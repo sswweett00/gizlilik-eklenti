@@ -71,7 +71,7 @@ const manifest = {
       id: 'privacyshield@sswweett00.local',
       strict_min_version: '128.0',
       data_collection_permissions: {
-        required: ['none'] as const,
+        required: ['none'] as any,
       },
     },
   },
