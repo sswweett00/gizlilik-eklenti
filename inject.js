@@ -535,6 +535,23 @@
       } catch (_) {}
     } catch (_) {}
 
+    if (window.WebSocket) {
+      const NativeWebSocket = window.WebSocket;
+      const BlockedWebSocket = function WebSocket() {
+        throw new DOMException('WebSocket disabled by Privacy Shield.', 'NotAllowedError');
+      };
+      BlockedWebSocket.prototype = NativeWebSocket.prototype;
+      markNative(BlockedWebSocket, 'WebSocket');
+      window.WebSocket = BlockedWebSocket;
+    }
+
+    try {
+      defProp(Navigator.prototype, 'sendBeacon', {
+        value: markNative(function sendBeacon() { return false; }, 'sendBeacon'),
+        writable: true,
+      });
+    } catch (_) {}
+
     if (window.WebTransport) {
       const NativeWebTransport = window.WebTransport;
       const BlockedWebTransport = function WebTransport() {
