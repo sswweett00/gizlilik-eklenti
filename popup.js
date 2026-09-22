@@ -86,6 +86,8 @@ function renderUI(settings) {
 
   // Maximum direct mode keeps all privacy modules enabled and non-negotiable.
   const maximumMode = settings.securityMode === 'maximum_direct';
+  masterToggle.disabled = maximumMode;
+  masterToggle.setAttribute('aria-disabled', maximumMode ? 'true' : 'false');
   moduleToggles.forEach((toggle) => {
     const key = toggle.dataset.key;
     const enabled = settings.modules[key] !== false;
@@ -100,6 +102,7 @@ function renderUI(settings) {
 
   // Timezone
   timezoneSelect.value = settings.timezone || 'auto';
+  timezoneSelect.disabled = maximumMode;
 
   // Geolocation mode
   geoModeSelect.value = settings.geolocationMode || 'deny';
