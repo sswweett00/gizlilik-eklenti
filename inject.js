@@ -200,15 +200,8 @@
   function generateTabProfile() {
     const STORAGE_KEY = '__ps_v2_profile';
 
-    // Try to restore an existing profile for this tab session
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Validate it has required fields
-        if (parsed && parsed.seed && parsed.ua && parsed.city) return parsed;
-      }
-    } catch (_) {}
+    // Never restore a profile from sessionStorage: the page owns that storage
+    // and could poison it before this document_start script runs.
 
     // Generate a fresh unpredictable seed for this tab. Web Crypto is
     // synchronous here, so it is safe to use during document_start.
@@ -218,12 +211,7 @@
       crypto.getRandomValues(random);
       seed = random[0] >>> 0;
     } catch (_) {}
-    if (!seed) {
-      const entropy = (Math.random() * 0xFFFFFFFF) ^
-                      (performance.now() * 1000) ^
-                      (Date.now() & 0xFFFFFFFF);
-      seed = (entropy >>> 0) || 0xA7F31C29;
-    }
+    if (!seed) seed = 0xA7F31C29;
 
     // Build per-module PRNGs from the same seed (XOR with different constants)
     const rng  = mulberry32(seed);
@@ -334,10 +322,8 @@
       glRenderer: glEntry.renderer,
     };
 
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-    } catch (_) {}
-
+    // Keep the profile only in this isolated JavaScript closure. It is never
+    // serialized into page-controlled storage.
     return profile;
   }
 
@@ -367,17 +353,18 @@
     },
   };
 
-  let _modules = { ...MODULE_DEFAULTS };
-  let _prefs = { ...PREF_DEFAULTS };
-
-  try {
-    const raw = sessionStorage.getItem('__ps_cfg');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.modules) _modules = { ...MODULE_DEFAULTS, ...parsed.modules };
-      if (parsed && parsed.prefs) _prefs = { ...PREF_DEFAULTS, ...parsed.prefs };
-    }
-  } catch (_) {}
+  // Do not trust sessionStorage for security state: it is writable by the
+  // page. Maximum mode starts from immutable extension defaults every document.
+  let _modules = { ...MODULE_DEFAULTS, enabled: true };
+  let _prefs = {
+    ...PREF_DEFAULTS,
+    securityMode: 'maximum_direct',
+    geolocationMode: 'deny',
+    timezone: 'auto',
+    spoofedLocation: null,
+    excludedDomains: [],
+    networkPrivacy: { mode: 'direct_hardened' },
+  };
 
   function isExcludedHost() {
     const host = String(location.hostname || '').toLowerCase();
@@ -1423,9 +1410,7 @@
   let _bridgeToken = null;
 
   function persistCfg() {
-    try {
-      sessionStorage.setItem('__ps_cfg', JSON.stringify({ modules: _modules, prefs: _prefs }));
-    } catch (_) {}
+    // Intentionally no-op. Security state must never be persisted in page-owned storage.
   }
 
   window.addEventListener('message', function onSettingsMessage(event) {
@@ -1445,7 +1430,7 @@
 
     if (d.__privacyShieldType === 'ROTATE_IDENTITY') {
       if (_bridgeToken && d.token === _bridgeToken) {
-        try { sessionStorage.removeItem('__ps_v2_profile'); } catch (_) {}
+        // Profiles are document-local and no longer stored in page storage.
       }
       return;
     }
