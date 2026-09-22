@@ -36,8 +36,8 @@ for (const [name, rules] of [['header', headerRules], ['tracker', trackerRules]]
 }
 
 const headerSource = read('rules/rules.json');
-assert.ok(!/header":s*"User-Agent"/.test(headerSource), 'static rules must not hard-code a global User-Agent');
-assert.ok(!/header":s*"Accept-Language"/.test(headerSource), 'static rules must not hard-code Accept-Language');
+assert.ok(!/header":\s*"User-Agent"/.test(headerSource), 'static rules must not hard-code a global User-Agent');
+assert.ok(!/header":\s*"Accept-Language"/.test(headerSource), 'static rules must not hard-code Accept-Language');
 
 const background = read('background.js');
 for (const marker of [
