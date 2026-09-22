@@ -1,57 +1,7 @@
 [
   {
     "id": 1,
-    "priority": 1,
-    "action": {
-      "type": "modifyHeaders",
-      "requestHeaders": [
-        {
-          "header": "User-Agent",
-          "operation": "set",
-          "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        },
-        {
-          "header": "Accept-Language",
-          "operation": "set",
-          "value": "en-US,en;q=0.9"
-        },
-        {
-          "header": "Sec-CH-UA",
-          "operation": "set",
-          "value": "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\""
-        },
-        {
-          "header": "Sec-CH-UA-Platform",
-          "operation": "set",
-          "value": "\"Windows\""
-        },
-        {
-          "header": "Sec-CH-UA-Mobile",
-          "operation": "set",
-          "value": "?0"
-        }
-      ]
-    },
-    "condition": {
-      "urlFilter": "*",
-      "resourceTypes": [
-        "main_frame",
-        "sub_frame",
-        "xmlhttprequest",
-        "script",
-        "stylesheet",
-        "image",
-        "font",
-        "object",
-        "media",
-        "websocket",
-        "other"
-      ]
-    }
-  },
-  {
-    "id": 2,
-    "priority": 1,
+    "priority": 5,
     "action": {
       "type": "modifyHeaders",
       "requestHeaders": [
