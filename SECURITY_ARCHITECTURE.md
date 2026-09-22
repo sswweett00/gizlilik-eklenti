@@ -1,8 +1,8 @@
-# Privacy Shield 3.1 — Security Architecture
+# Privacy Shield 4.0 — Security Architecture
 
 ## Executive Summary
 
-Privacy Shield 3.0 is a self-contained Chromium privacy-hardening extension for direct network connections. It does not configure or depend on a proxy, VPN, or Tor.
+Privacy Shield 4.0 is a Chromium privacy-hardening extension plus a zero-cost system deployment model for direct network connections. It does not configure or depend on a proxy, VPN, or Tor.
 
 The system deliberately does not claim to hide the public source IP of a normal direct TCP/QUIC connection. A destination server necessarily receives the network source address of the connection that reaches it. Network-layer anonymity therefore remains outside the capability of a browser extension without an intermediary network path.
 
@@ -15,7 +15,8 @@ The achievable security goal is: reduce browser-side fingerprinting, block major
 1. Main-world injector: inject.js. Runs at document_start and hardens WebRTC, WebTransport, Canvas, WebGL, Audio, DOM geometry, Navigator, Client Hints, Screen, Geolocation, Permissions, and Timezone APIs.
 2. Isolated bridge: bridge.js. Relays profiles and settings between the page world and extension service worker using a bridge-minted token.
 3. Background service worker: background.js. Owns Chrome privacy policies, DNR rules, per-tab identities, validation, site exceptions, rotation, tab lifecycle and status reporting.
-4. Declarative network rules: header_rules, tracker_rules and network_rules. The network ruleset blocks WebTransport.
+4. Declarative network rules: header_rules, tracker_rules and network_rules. The network ruleset blocks WebTransport and ping/beacon telemetry.
+5. Zero-cost deployment assets: OS audit tools and deployment guidance for Windows, Linux, macOS, native Tails, Tor and Tor Browser. Tor/Tails are intentionally external system components; the extension never attempts to impersonate or reimplement them.
 
 ### Data Flow
 
@@ -78,6 +79,12 @@ Per-tab profile generation prefers `crypto.getRandomValues()` at `document_start
 ### State and trust boundaries
 
 Page JavaScript is treated as hostile. Settings are schema-normalized, profile data is sanitized before network-rule construction, DNR mutations are serialized, and main-world settings updates require the bridge token.
+
+## System-Level Anonymity Architecture
+
+The extension cannot alter a direct network source IP. When website-visible IP anonymity is required, the recommended zero-cost stack is native Tails with MAC address anonymization, Tor, and Tor Browser. Tor Project explicitly recommends Tor Browser instead of routing another browser through Tor because other browsers can leak real IP/DNS/WebRTC information and expose identifying fingerprint, cookie and cache state.
+
+The repository includes `docs/ZERO_COST_DEPLOYMENT.md`, `docs/THREAT_MODEL.md`, `docs/VERIFICATION.md` and platform audit/setup scripts to operationalize this architecture.
 
 ## Configuration Guidelines
 
