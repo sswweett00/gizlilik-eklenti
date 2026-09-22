@@ -20,6 +20,13 @@ const masterToggle       = document.getElementById('masterToggle');
 const statusDot          = document.getElementById('statusDot');
 const statusLabel        = document.getElementById('statusLabel');
 const activeModulesCount = document.getElementById('activeModulesCount');
+const ipProtectionMode  = document.getElementById('ipProtectionMode');
+const proxyScheme       = document.getElementById('proxyScheme');
+const proxyHost         = document.getElementById('proxyHost');
+const proxyPort         = document.getElementById('proxyPort');
+const ipLockDot         = document.getElementById('ipLockDot');
+const ipLockTitle       = document.getElementById('ipLockTitle');
+const ipLockSub         = document.getElementById('ipLockSub');
 const timezoneSelect     = document.getElementById('timezoneSelect');
 const geoModeSelect      = document.getElementById('geoModeSelect');
 const spoofLocationSection = document.getElementById('spoofLocationSection');
@@ -76,6 +83,12 @@ function renderUI(settings) {
 
   // Master toggle
   masterToggle.checked = settings.enabled;
+
+  const ip = settings.ipProtection || {};
+  if (ipProtectionMode) ipProtectionMode.value = ip.mode || 'proxy_required';
+  if (proxyScheme) proxyScheme.value = ip.scheme || 'socks5';
+  if (proxyHost) proxyHost.value = ip.host || '';
+  if (proxyPort) proxyPort.value = ip.port || 1080;
   updateGlobalStatusIndicator(settings.enabled);
   document.body.classList.toggle('shield-disabled', !settings.enabled);
 
@@ -109,6 +122,28 @@ const GEO_MODE_LABELS = {
   custom: 'Custom coordinates',
 };
 
+function renderIpProtectionStatus(status) {
+  const mode = status?.ipProtection;
+  if (!mode) return;
+
+  const locked = mode.mode === 'proxy_required' && mode.state !== 'proxy';
+  if (ipLockDot) ipLockDot.className = 'ip-lock-dot ' + (locked ? 'locked' : 'protected');
+  if (ipLockTitle) {
+    if (mode.mode === 'browser_only') ipLockTitle.textContent = 'Browser protections only';
+    else if (mode.state === 'proxy') ipLockTitle.textContent = 'Strict IP lock active';
+    else ipLockTitle.textContent = 'Network locked — proxy required';
+  }
+  if (ipLockSub) {
+    if (mode.mode === 'browser_only') {
+      ipLockSub.textContent = 'Sites can still see the network exit IP of the browser connection.';
+    } else if (mode.state === 'proxy') {
+      ipLockSub.textContent = 'Web traffic is routed through the configured proxy. No DIRECT fallback is configured.';
+    } else {
+      ipLockSub.textContent = 'No usable proxy is configured. Direct site connections are blocked.';
+    }
+  }
+}
+
 function renderStatus(status) {
   if (!status) return;
 
@@ -130,6 +165,8 @@ function renderStatus(status) {
   if (status.activeTab) {
     renderSiteInfo({ tab: { id: status.activeTab.id, url: '', host: status.activeTab.host }, excluded: status.activeTab.excluded });
   }
+
+  renderIpProtectionStatus(status);
 }
 
 function renderErrorState() {
@@ -196,6 +233,35 @@ async function refreshActiveTab() {
 }
 
 // ─── Event Listeners ──────────────────────────────────────────────────────────
+
+function updateIpProtectionFromUi() {
+  if (!currentSettings) return;
+
+  currentSettings.ipProtection = currentSettings.ipProtection || {
+    mode: 'proxy_required',
+    scheme: 'socks5',
+    host: '',
+    port: 1080,
+  };
+
+  currentSettings.ipProtection.mode =
+    ipProtectionMode?.value === 'browser_only' ? 'browser_only' : 'proxy_required';
+  currentSettings.ipProtection.scheme = proxyScheme?.value || 'socks5';
+  currentSettings.ipProtection.host = (proxyHost?.value || '').trim();
+
+  const port = Number(proxyPort?.value);
+  currentSettings.ipProtection.port =
+    Number.isInteger(port) && port >= 1 && port <= 65535 ? port : 1080;
+
+  scheduleSave();
+}
+
+[ipProtectionMode, proxyScheme, proxyHost, proxyPort].forEach((element) => {
+  element?.addEventListener('change', updateIpProtectionFromUi);
+  element?.addEventListener('input', debounce(updateIpProtectionFromUi, 300));
+});
+
+
 
 siteExceptionBtn?.addEventListener('click', async () => {
   siteExceptionBtn.disabled = true;
