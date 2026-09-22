@@ -25,16 +25,14 @@
               "igshid",
               "vero_id",
               "oly_enc_id",
-              "oly_anon_id",
-              "ref",
-              "ref_"
+              "oly_anon_id"
             ]
           }
         }
       }
     },
     "condition": {
-      "regexFilter": "(?:[?&])(?:utm_source|utm_medium|utm_campaign|utm_term|utm_content|utm_id|gclid|dclid|fbclid|mc_cid|mc_eid|msclkid|yclid|_hsenc|igshid|vero_id|oly_enc_id|oly_anon_id|ref|ref_)(?:=|&|$)",
+      "regexFilter": "(?:[?&])(?:utm_source|utm_medium|utm_campaign|utm_term|utm_content|utm_id|gclid|dclid|fbclid|mc_cid|mc_eid|msclkid|yclid|_hsenc|igshid|vero_id|oly_enc_id|oly_anon_id)(?:=|&|$)",
       "resourceTypes": [
         "main_frame",
         "sub_frame"
