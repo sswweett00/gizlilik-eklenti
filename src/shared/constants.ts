@@ -1,7 +1,8 @@
 export const TRACKING_QUERY_PARAMS = Object.freeze([
   'utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id',
   'gclid','dclid','fbclid','mc_cid','mc_eid','msclkid','yclid','_hsenc',
-  'igshid','vero_id','oly_enc_id','oly_anon_id',]);
+  'igshid','vero_id','oly_enc_id','oly_anon_id',
+  'utm_reader', 'gclsrc', 'gbraid', 'wbraid', 'twclid', 'ttclid', 'li_fat_id', 'mc_tc', 'mibextid', 'srsltid', '_gl', 'epik', 'mkt_tok', 'ck_subscriber_id', 'cmpid', 'campaign_id', 'fb_action_ids', 'fb_action_types', 'fb_source', 'fb_ref',]);
 
 export const IP_DISCOVERY_DOMAINS = Object.freeze([
   'api.ipify.org','api64.ipify.org','ipify.org','ifconfig.co','ifconfig.me',
