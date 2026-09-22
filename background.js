@@ -310,42 +310,12 @@ function profileKey(p) {
   ].join('|');
 }
 
-function buildHeadersForProfile(p) {
-  const requestHeaders = [
-    { header: 'User-Agent', operation: 'set', value: p.ua },
-    {
-      header: 'Accept-Language',
-      operation: 'set',
-      value: buildAcceptLanguage(p.languages),
-    },
-  ];
-
-  const isChromiumLike = Array.isArray(p.brands) && p.brands.length > 1;
-  if (isChromiumLike) {
-    requestHeaders.push(
-      {
-        header: 'Sec-CH-UA',
-        operation: 'set',
-        value: p.brands.map((b) => `"${b.brand}";v="${b.version}"`).join(', '),
-      },
-      {
-        header: 'Sec-CH-UA-Platform',
-        operation: 'set',
-        value: `"${p.uaPlatform}"`,
-      },
-      {
-        header: 'Sec-CH-UA-Mobile',
-        operation: 'set',
-        value: p.uaMobile ? '?1' : '?0',
-      }
-    );
-  } else {
-    // Safari-style identity: must not send any Client-Hints headers
-    for (const h of ['Sec-CH-UA', 'Sec-CH-UA-Platform', 'Sec-CH-UA-Mobile']) {
-      requestHeaders.push({ header: h, operation: 'remove' });
-    }
-  }
-  return requestHeaders;
+function buildHeadersForProfile() {
+  // Do not rewrite User-Agent, Accept-Language or low-entropy Client Hints.
+  // The first navigation request is sent before document_start profile
+  // registration, so per-tab spoofing creates a detectable split identity.
+  // High-entropy Client Hints are already removed by static DNR rules.
+  return [];
 }
 
 function buildSessionRule(ruleId, tabIds, profile) {
@@ -395,9 +365,8 @@ async function registerTabProfile(tabId, rawProfile) {
   store[tabId] = profile;
   await setTabStore(store);
 
-  if (!s.enabled || !s.modules.headers) return;
-
-  await enqueue(async () => {
+  // Header identity remains native/coherent. No per-tab header rewrite is installed.
+  return;
     const rules = await chrome.declarativeNetRequest.getSessionRules();
     const removeRuleIds = rules
       .filter((r) => (r.condition.tabIds || []).includes(tabId))
@@ -472,28 +441,18 @@ async function unregisterTab(tabId) {
 // Rebuild every session rule from the stored profiles (used after the
 // headers module / master toggle changed).
 async function rebuildAllSessionRules() {
-  const s = await getSettings();
-  const existing = await chrome.declarativeNetRequest.getSessionRules();
-  const removeRuleIds = existing.map((r) => r.id);
-  const addRules = [];
-
-  if (s.enabled && s.modules.headers) {
-    const store = await getTabStore();
-    const byKey = new Map();
-    for (const [tabIdStr, profile] of Object.entries(store)) {
-      const k = profileKey(profile);
-      if (!byKey.has(k)) byKey.set(k, { tabIds: [], profile });
-      byKey.get(k).tabIds.push(Number(tabIdStr));
+  // 4.1+ deliberately keeps request identity native/coherent. Remove any
+  // legacy session header rules left by earlier versions.
+  try {
+    const existing = await chrome.declarativeNetRequest.getSessionRules();
+    if (existing.length) {
+      await chrome.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: existing.map((r) => r.id),
+      });
     }
-    let nextId = SESSION_RULE_ID_BASE;
-    for (const { tabIds, profile } of byKey.values()) {
-      if (nextId >= SESSION_RULE_ID_BASE + MAX_SESSION_RULES) break;
-      addRules.push(buildSessionRule(nextId, tabIds, profile));
-      nextId++;
-    }
+  } catch (err) {
+    console.error('[PrivacyShield] Session identity cleanup failed:', err);
   }
-
-  await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds, addRules });
 }
 
 async function resetTabTracking() {
