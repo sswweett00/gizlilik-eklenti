@@ -553,6 +553,9 @@ function normalizeSettings(raw) {
   const normalized = deepMerge(DEFAULT_SETTINGS, sanitizeIncomingSettings(raw || {}));
 
   if (normalized.securityMode === 'maximum_direct') {
+    // Maximum mode is immutable/fail-closed: page-controlled settings,
+    // popup races and malformed storage cannot disable the protection layer.
+    normalized.enabled = true;
     // These protections are the direct-connection safety floor. They are
     // never weakened by malformed storage, popup races or page-controlled data.
     for (const key of Object.keys(DEFAULT_SETTINGS.modules)) {
