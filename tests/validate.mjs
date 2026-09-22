@@ -130,12 +130,15 @@ for (const path of [
   'scripts/linux/privacy-audit.sh',
   'scripts/windows/privacy-audit.ps1',
   'scripts/macos/privacy-audit.sh',
+  ,'docs/BROWSERLEAKS_REMEDIATION.md',
 ]) {
   const source = read(path);
   assert.ok(source.length > 200, 'deployment/security asset must be non-empty: ' + path);
 }
 
 assert.ok(read('docs/ZERO_COST_DEPLOYMENT.md').includes('Tails'), 'deployment guide must include Tails');
+assert.ok(read('docs/BROWSERLEAKS_REMEDIATION.md').includes('JA3/JA4'), 'BrowserLeaks matrix must document TLS fingerprint boundary');
+assert.ok(read('docs/BROWSERLEAKS_REMEDIATION.md').includes('Public IP'), 'BrowserLeaks matrix must document network IP boundary');
 assert.ok(read('docs/ZERO_COST_DEPLOYMENT.md').includes('Tor Browser'), 'deployment guide must include Tor Browser');
 assert.ok(read('scripts/linux/mac-randomize.sh').includes('cloned-mac-address random'), 'Linux MAC randomization tool must use NetworkManager random MAC');
 assert.ok(read('scripts/windows/privacy-audit.ps1').includes('getmac /v'), 'Windows privacy audit must inspect MAC');
