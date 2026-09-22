@@ -70,6 +70,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   }
 
   await applyPrivacySettings();
+  await applyContentSettings();
   await applyRuleSets();
   await applySiteExceptionRules();
   await applyDirectPrivacyPolicy();
@@ -79,6 +80,7 @@ chrome.runtime.onStartup.addListener(async () => {
   console.log('[PrivacyShield] Browser started, applying settings.');
   await resetTabTracking();
   await applyPrivacySettings();
+  await applyContentSettings();
   await applyRuleSets();
   await applySiteExceptionRules();
   await applyDirectPrivacyPolicy();
@@ -134,6 +136,78 @@ async function applyPrivacySettings() {
     console.log('[PrivacyShield] Direct privacy policy applied.');
   } catch (err) {
     console.error('[PrivacyShield] Error applying privacy settings:', err);
+  }
+}
+
+// ─── Browser Content Settings Hardening ──────────────────────────────────────
+// The page-world API shims are defense-in-depth. Chrome content settings provide
+// a browser-enforced permission boundary for location, camera, microphone,
+// advanced clipboard access, notifications and persistent site data.
+const HARDENED_CONTENT_SETTINGS = () => [
+  ['location', chrome.contentSettings.location, 'block'],
+  ['camera', chrome.contentSettings.camera, 'block'],
+  ['microphone', chrome.contentSettings.microphone, 'block'],
+  ['clipboard', chrome.contentSettings.clipboard, 'block'],
+  ['notifications', chrome.contentSettings.notifications, 'block'],
+  ['cookies', chrome.contentSettings.cookies, 'session_only'],
+];
+
+async function applyContentSettings() {
+  try {
+    const state = await chrome.storage.session.get('contentSettingsPolicy');
+    if (!state.contentSettingsPolicy?.original) {
+      const original = {};
+      for (const [key, setting] of HARDENED_CONTENT_SETTINGS()) {
+        try {
+          const current = await setting.get({
+            primaryUrl: 'https://example.com/',
+            secondaryUrl: 'https://example.com/',
+            incognito: false,
+          });
+          if (current?.setting !== undefined) original[key] = current.setting;
+        } catch (_) {}
+      }
+      await chrome.storage.session.set({
+        contentSettingsPolicy: { original, updatedAt: Date.now() },
+      });
+    }
+
+    const currentSettings = await getSettings();
+    if (!currentSettings.enabled) {
+      const saved = (await chrome.storage.session.get('contentSettingsPolicy')).contentSettingsPolicy?.original || {};
+      for (const [key, setting] of HARDENED_CONTENT_SETTINGS()) {
+        if (saved[key] !== undefined) {
+          try { await setting.clear({ scope: 'regular' }); } catch (_) {}
+          try {
+            await setting.set({
+              primaryPattern: '<all_urls>',
+              secondaryPattern: '<all_urls>',
+              setting: saved[key],
+              scope: 'regular',
+            });
+          } catch (_) {}
+        } else {
+          try { await setting.clear({ scope: 'regular' }); } catch (_) {}
+        }
+      }
+      await chrome.storage.session.remove('contentSettingsPolicy');
+      return;
+    }
+
+    for (const [key, setting, value] of HARDENED_CONTENT_SETTINGS()) {
+      try {
+        await setting.set({
+          primaryPattern: '<all_urls>',
+          secondaryPattern: key === 'location' ? '<all_urls>' : '<all_urls>',
+          setting: value,
+          scope: 'regular',
+        });
+      } catch (err) {
+        console.warn('[PrivacyShield] Content setting unavailable:', key, err?.message || err);
+      }
+    }
+  } catch (err) {
+    console.error('[PrivacyShield] Content settings hardening failed:', err);
   }
 }
 
@@ -336,6 +410,20 @@ const SITE_RULE_PRIORITY = 10000;
 
 async function applySiteExceptionRules() {
   const settings = await getSettings();
+  if (settings.securityMode === 'maximum_direct') {
+    try {
+      const current = await chrome.declarativeNetRequest.getDynamicRules();
+      const ours = current
+        .filter((rule) => rule.id >= SITE_RULE_ID_BASE && rule.id < SITE_RULE_ID_BASE + 200)
+        .map((rule) => rule.id);
+      if (ours.length) {
+        await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: ours });
+      }
+    } catch (err) {
+      console.error('[PrivacyShield] Maximum-mode site exception cleanup failed:', err);
+    }
+    return;
+  }
   const domains = settings.excludedDomains || [];
   try {
     const current = await chrome.declarativeNetRequest.getDynamicRules();
@@ -581,6 +669,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
 
           const current = await getSettings();
+          if (current.securityMode === 'maximum_direct') {
+            sendResponse({ success: false, error: 'Site exceptions are disabled in maximum direct mode.' });
+            break;
+          }
           const excludedDomains = new Set(current.excludedDomains || []);
           const excluded = !excludedDomains.has(domain);
           if (excluded) excludedDomains.add(domain);
@@ -692,6 +784,7 @@ async function buildStatus() {
 async function onSettingsChanged(previousSettings, nextSettings) {
   const settings = nextSettings || await getSettings();
   await applyPrivacySettings();
+  await applyContentSettings();
   await applyRuleSets();
   await applySiteExceptionRules();
   await applyDirectPrivacyPolicy();
