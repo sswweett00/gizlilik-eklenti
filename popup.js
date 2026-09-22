@@ -173,12 +173,22 @@ function renderNetworkPrivacyStatus(status) {
   }
 
   if (localTor) {
-    if (ipLockDot) ipLockDot.className = torActive ? 'ip-lock-dot protected' : 'ip-lock-dot inactive';
-    if (ipLockTitle) ipLockTitle.textContent = torActive ? 'Local Tor egress active' : 'Local Tor selected — not reachable';
+    const incognitoGap = mode.incognitoAccessAllowed && !mode.incognitoProxyConfigured;
+    const unavailableIncognito = !mode.incognitoAccessAllowed && mode.incognitoProxyConfigured !== true;
+    if (ipLockDot) ipLockDot.className = torActive && !incognitoGap && !unavailableIncognito ? 'ip-lock-dot protected' : 'ip-lock-dot inactive';
+    if (ipLockTitle) {
+      ipLockTitle.textContent =
+        torActive && !incognitoGap && !unavailableIncognito
+          ? 'Local Tor egress active'
+          : 'Local Tor selected — protection incomplete';
+    }
     if (ipLockSub) {
-      ipLockSub.textContent = torActive
-        ? 'HTTP(S) traffic is routed through the selected local SOCKS5 endpoint with no DIRECT fallback.'
-        : 'Tor is selected but the local SOCKS5 proxy is not active. Verify Tor before browsing; DIRECT fallback is intentionally disabled.';
+      ipLockSub.textContent =
+        torActive && !incognitoGap && !unavailableIncognito
+          ? 'Regular and available incognito proxy scopes are routed through the selected local SOCKS5 endpoint. Direct fallback is disabled.'
+          : unavailableIncognito
+            ? 'Allow this extension in Incognito to guarantee the same Tor proxy and kill-switch coverage there.'
+            : 'The selected Tor proxy is not active in every controllable browser scope. Traffic remains fail-closed.';
     }
     return;
   }
