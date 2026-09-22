@@ -29,7 +29,7 @@
   <section class="master-section">
     <div class="master-toggle-row">
       <div class="master-info">
-        <span class="master-title">Protection Active</span>
+        <span class="master-title">Protection Control</span>
         <span class="master-sub" id="activeModulesCount">All modules enabled</span>
       </div>
       <label class="toggle-switch toggle-switch--large" title="Enable/disable all protections">
@@ -61,7 +61,7 @@
       </div>
     </div>
 
-    <p class="site-help"><strong>Maximum direct mode:</strong> all browser privacy modules are locked on, geolocation is deny-by-default, WebRTC/WebTransport are blocked, and beacon/ping telemetry is blocked.</p>
+    <p class="site-help"><strong>Independent controls:</strong> every protection module below can be enabled or disabled separately. The master switch disables the entire extension policy.</p>
     <p class="site-help"><strong>Location boundary:</strong> the Geolocation API is blocked and common IP-location API lookups are denied, but a website can still derive approximate location from the public IP that receives the connection.</p>
     <p class="site-help"><strong>Important:</strong> this Chromium extension cannot hide the source IP, ISP/ASN, TCP/IP fingerprint, JA3/JA4 or complete HTTP/2 fingerprint of a direct connection. To hide IP-based location from the destination, the browser must use Tor, VPN, proxy, or another intermediary network path.</p>
     <p class="site-help"><strong>AEGIS-9:</strong> for zero-cost website-visible IP anonymity, use Qubes R4.3 + Whonix 18 with <code>anon-whonix → sys-whonix → Tor</code> and a Whonix disposable template. See the repository deployment guide.</p>
@@ -217,6 +217,28 @@
         </label>
       </div>
 
+
+      <div class="module-card" data-module="trackers">
+        <div class="module-icon module-icon--trackers"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v2.5A3.5 3.5 0 007.5 14H9v2H7a1 1 0 100 2h6a1 1 0 100-2h-2v-2h1.5a3.5 3.5 0 003.5-3.5V8a6 6 0 00-6-6z"/></svg></div>
+        <div class="module-info"><span class="module-name">Tracker Blocking</span><span class="module-desc">Cross-site tracker rules</span></div>
+        <label class="toggle-switch"><input type="checkbox" class="module-toggle" data-key="trackers" /><span class="toggle-slider"></span></label>
+      </div>
+      <div class="module-card" data-module="ads">
+        <div class="module-icon module-icon--ads"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M6 10h8M10 6v8"/></svg></div>
+        <div class="module-info"><span class="module-name">Ad Blocking</span><span class="module-desc">Advertising request filters</span></div>
+        <label class="toggle-switch"><input type="checkbox" class="module-toggle" data-key="ads" /><span class="toggle-slider"></span></label>
+      </div>
+      <div class="module-card" data-module="urlCleaner">
+        <div class="module-icon module-icon--url"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 13l-2 2a3 3 0 104 4l2-2M13 7l2-2a3 3 0 10-4-4L9 3"/><path d="M7.5 12.5l5-5"/></svg></div>
+        <div class="module-info"><span class="module-name">URL Cleaner</span><span class="module-desc">Remove tracking parameters</span></div>
+        <label class="toggle-switch"><input type="checkbox" class="module-toggle" data-key="urlCleaner" /><span class="toggle-slider"></span></label>
+      </div>
+      <div class="module-card" data-module="browserPrivacy">
+        <div class="module-icon module-icon--browser"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="14" height="11" rx="2"/><path d="M3 8h14M7 17h6"/></svg></div>
+        <div class="module-info"><span class="module-name">Browser Privacy</span><span class="module-desc">Privacy API & cookie hardening</span></div>
+        <label class="toggle-switch"><input type="checkbox" class="module-toggle" data-key="browserPrivacy" /><span class="toggle-slider"></span></label>
+      </div>
+
       <div class="module-card" data-module="timezone">
         <div class="module-icon module-icon--tz">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
@@ -328,7 +350,7 @@
         </div>
         <button class="site-btn site-btn--secondary" id="rotateIdentityBtn" type="button">Rotate identity</button>
       </div>
-      <p class="site-help">Maximum mode does not apply site exceptions; legacy exclusion entries are ignored by the hardened network policy.</p>
+      <p class="site-help">Site exceptions are optional. Disabling a module takes effect after the active page reloads so page-world hooks can be removed cleanly.</p>
     </div>
   </section>
 
@@ -366,7 +388,7 @@
   <!-- Footer -->
   <footer class="footer">
     <button class="btn-reset" id="resetBtn" title="Reset all settings to defaults">Reset Defaults</button>
-    <a class="footer-version" href="../options/options.html">v4.5.0 · Options</a>
+    <a class="footer-version" href="../options/options.html">v4.6.0 · Options</a>
   </footer>
 
   <script type="module" src="./popup.ts"></script>
