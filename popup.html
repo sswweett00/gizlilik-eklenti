@@ -39,47 +39,29 @@
     </div>
   </section>
 
-  <!-- IP Lock -->
+    <!-- Direct Network Privacy -->
   <section class="ip-lock-section">
-    <h2 class="section-title">Network IP Lock</h2>
-    <div class="ip-lock-banner" id="ipLockBanner">
-      <span class="ip-lock-dot" id="ipLockDot"></span>
+    <h2 class="section-title">Direct Network Privacy</h2>
+    <div class="ip-lock-banner">
+      <span class="ip-lock-dot protected" id="ipLockDot"></span>
       <div class="ip-lock-info">
-        <span class="ip-lock-title" id="ipLockTitle">Strict / fail-closed</span>
-        <span class="ip-lock-sub" id="ipLockSub">Direct site connections are blocked until a proxy is configured.</span>
+        <span class="ip-lock-title" id="ipLockTitle">Direct connection hardened</span>
+        <span class="ip-lock-sub" id="ipLockSub">WebRTC/WebTransport leak surfaces and browser-side tracking signals are hardened.</span>
       </div>
     </div>
 
-    <div class="preset-row">
-      <label class="preset-label" for="ipProtectionMode">Mode</label>
-      <select id="ipProtectionMode" class="preset-select">
-        <option value="proxy_required">Strict — proxy required</option>
-        <option value="browser_only">Browser protections only</option>
-      </select>
-    </div>
-
-    <div class="preset-row">
-      <label class="preset-label" for="proxyScheme">Proxy</label>
-      <select id="proxyScheme" class="preset-select">
-        <option value="socks5">SOCKS5</option>
-        <option value="https">HTTPS</option>
-        <option value="http">HTTP</option>
-        <option value="socks4">SOCKS4</option>
-      </select>
-    </div>
-
-    <div class="coord-row">
-      <div class="coord-field">
-        <label class="coord-label" for="proxyHost">Proxy host</label>
-        <input type="text" id="proxyHost" class="coord-input" autocomplete="off" spellcheck="false" placeholder="127.0.0.1 or proxy.example" />
+    <div class="status-grid">
+      <div class="status-item">
+        <span class="status-item-label">Network</span>
+        <span class="status-item-value">Direct</span>
       </div>
-      <div class="coord-field">
-        <label class="coord-label" for="proxyPort">Port</label>
-        <input type="number" id="proxyPort" class="coord-input" min="1" max="65535" step="1" value="1080" />
+      <div class="status-item">
+        <span class="status-item-label">Public IP</span>
+        <span class="status-item-value">Visible to destination</span>
       </div>
     </div>
 
-    <p class="site-help">Use a proxy whose exit IP should be visible to websites. With strict mode, Privacy Shield never intentionally falls back to DIRECT when the proxy is missing or unavailable.</p>
+    <p class="site-help">No proxy, VPN or Tor is used. A direct TCP/QUIC connection necessarily exposes its source public IP to the destination server; this extension does not claim to change that network-layer fact.</p>
   </section>
 
   <!-- Module Toggles -->
@@ -212,6 +194,22 @@
         </div>
         <label class="toggle-switch">
           <input type="checkbox" class="module-toggle" data-key="headers" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="module-card" data-module="network">
+        <div class="module-icon module-icon--network">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M5 4h10M5 10h10M5 16h10"/><circle cx="3" cy="4" r="1"/><circle cx="3" cy="10" r="1"/><circle cx="3" cy="16" r="1"/>
+          </svg>
+        </div>
+        <div class="module-info">
+          <span class="module-name">Network Surfaces</span>
+          <span class="module-desc">WebRTC & WebTransport block</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="module-toggle" data-key="network" />
           <span class="toggle-slider"></span>
         </label>
       </div>
@@ -361,7 +359,7 @@
   <!-- Footer -->
   <footer class="footer">
     <button class="btn-reset" id="resetBtn" title="Reset all settings to defaults">Reset Defaults</button>
-    <span class="footer-version">v2.3.0</span>
+    <span class="footer-version">v3.0.0</span>
   </footer>
 
   <script src="popup.js"></script>
