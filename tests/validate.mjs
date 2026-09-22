@@ -70,7 +70,6 @@ for (const marker of ['siteExceptionBtn', 'rotateIdentityBtn', 'rulesetValue', '
 console.log('Privacy Shield static validation passed.');
 
 assert.ok(!manifest.permissions.includes('proxy'), 'implementation must not require the proxy API');
-const networkRules = JSON.parse(read('rules/network.json'));
 assert.ok(
   networkRules.some((rule) => rule.action?.type === 'block' && rule.condition?.resourceTypes?.includes('webtransport')),
   'WebTransport must be blocked in hardened network mode'
