@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
     timezone: true,
     headers: true,
     permissions: true,
+    network: true,
   },
   timezone: 'auto', // 'auto' = unique per-tab timezone from the city pool
   geolocationMode: 'spoof', // 'deny' | 'spoof' (per-tab city) | 'custom'
@@ -37,11 +38,8 @@ const DEFAULT_SETTINGS = {
     accuracy: 15,
   },
   excludedDomains: [],
-  ipProtection: {
-    mode: 'proxy_required', // 'proxy_required' = fail closed, 'browser_only' = no proxy control
-    scheme: 'socks5',
-    host: '',
-    port: 1080,
+  networkPrivacy: {
+    mode: 'direct_hardened',
   },
 };
 
@@ -54,7 +52,7 @@ function publicSettings(s) {
     geolocationMode: s.geolocationMode,
     spoofedLocation: s.spoofedLocation,
     excludedDomains: s.excludedDomains,
-    ipProtection: s.ipProtection,
+    networkPrivacy: s.networkPrivacy,
   };
 }
 
@@ -72,7 +70,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   await applyPrivacySettings();
   await applyRuleSets();
   await applySiteExceptionRules();
-  await applyIpProtection();
+  await applyDirectPrivacyPolicy();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
@@ -81,7 +79,7 @@ chrome.runtime.onStartup.addListener(async () => {
   await applyPrivacySettings();
   await applyRuleSets();
   await applySiteExceptionRules();
-  await applyIpProtection();
+  await applyDirectPrivacyPolicy();
 });
 
 // ─── Privacy API Settings ─────────────────────────────────────────────────────
@@ -141,183 +139,76 @@ async function applyPrivacySettings() {
   }
 }
 
-// ─── Network IP Protection / Fail-Closed Proxy ────────────────────────────────
+// ─── Direct-Connection Privacy Hardening ────────────────────────────────────
 
-const IP_LOCK_PAC = `function FindProxyForURL(url, host) { return "PROXY 127.0.0.1:9"; }`;
+const HARDENED_PRIVACY_ITEMS = () => [
+  ['network.webRTCIPHandlingPolicy', chrome.privacy.network.webRTCIPHandlingPolicy, 'disable_non_proxied_udp'],
+  ['network.networkPredictionEnabled', chrome.privacy.network.networkPredictionEnabled, false],
+  ['websites.hyperlinkAuditingEnabled', chrome.privacy.websites.hyperlinkAuditingEnabled, false],
+  ['websites.referrersEnabled', chrome.privacy.websites.referrersEnabled, false],
+  ['websites.thirdPartyCookiesAllowed', chrome.privacy.websites.thirdPartyCookiesAllowed, false],
+  ['websites.topicsEnabled', chrome.privacy.websites.topicsEnabled, false],
+  ['websites.fledgeEnabled', chrome.privacy.websites.fledgeEnabled, false],
+  ['websites.adMeasurementEnabled', chrome.privacy.websites.adMeasurementEnabled, false],
+  ['services.searchSuggestEnabled', chrome.privacy.services.searchSuggestEnabled, false],
+  ['services.alternateErrorPagesEnabled', chrome.privacy.services.alternateErrorPagesEnabled, false],
+  ['services.autofillAddressEnabled', chrome.privacy.services.autofillAddressEnabled, false],
+  ['services.autofillCreditCardEnabled', chrome.privacy.services.autofillCreditCardEnabled, false],
+  ['services.passwordSavingEnabled', chrome.privacy.services.passwordSavingEnabled, false],
+];
 
-async function getProxySettings() {
-  try {
-    return await chrome.proxy.settings.get({ incognito: false });
-  } catch (_) {
-    return null;
-  }
-}
-
-function sanitizeProxySettings(raw) {
-  const input = raw && typeof raw === 'object' ? raw : {};
-  const scheme = ['http', 'https', 'socks4', 'socks5'].includes(input.scheme)
-    ? input.scheme
-    : 'socks5';
-  const host = typeof input.host === 'string'
-    ? input.host.trim().toLowerCase().slice(0, 255)
-    : '';
-  const port = Number(input.port);
-  const safePort = Number.isInteger(port) && port >= 1 && port <= 65535 ? port : 1080;
-
-  return {
-    mode: input.mode === 'browser_only' ? 'browser_only' : 'proxy_required',
-    scheme,
-    host,
-    port: safePort,
-  };
-}
-
-function isSafeProxyHost(host) {
-  if (!host || host.length > 255) return false;
-  if (/[^a-z0-9.:[\]-]/i.test(host)) return false;
-  return true;
-}
-
-function proxyServerFromSettings(settings) {
-  return {
-    scheme: settings.scheme,
-    host: settings.host,
-    port: settings.port,
-  };
-}
-
-async function rememberCurrentProxyIfNeeded() {
-  const { proxyOwnership } = await chrome.storage.session.get('proxyOwnership');
-  if (proxyOwnership?.owned) return proxyOwnership;
-
-  const current = await getProxySettings();
-  const ownership = {
-    owned: false,
-    original: current?.value || null,
-    token: Math.random().toString(36).slice(2) + Date.now().toString(36),
-  };
-  await chrome.storage.session.set({ proxyOwnership: ownership });
-  return ownership;
-}
-
-async function applyIpProtection() {
+async function applyDirectPrivacyPolicy() {
   const settings = await getSettings();
-  const protection = sanitizeProxySettings(settings.ipProtection);
+  if (!settings.enabled) return;
 
   try {
-    if (!settings.enabled || protection.mode === 'browser_only') {
-      const { proxyOwnership } = await chrome.storage.session.get('proxyOwnership');
-      if (proxyOwnership?.owned) {
-        await chrome.proxy.settings.set({
-          value: proxyOwnership.original || { mode: 'system' },
-          scope: 'regular',
-        });
-        await chrome.storage.session.remove('proxyOwnership');
+    const { privacyPolicy } = await chrome.storage.session.get('privacyPolicy');
+    if (!privacyPolicy?.original) {
+      const original = {};
+      for (const [key, setting] of HARDENED_PRIVACY_ITEMS()) {
+        try {
+          const current = await setting.get({ scope: 'regular' });
+          if (current?.value !== undefined) original[key] = current.value;
+        } catch (_) {}
       }
-      return;
+      await chrome.storage.session.set({ privacyPolicy: { original, updatedAt: Date.now() } });
     }
 
-    await rememberCurrentProxyIfNeeded();
-
-    // No configured proxy means FAIL CLOSED. A dead local proxy is used so
-    // the browser cannot silently make a DIRECT connection.
-    if (!isSafeProxyHost(protection.host)) {
-      await chrome.proxy.settings.set({
-        value: {
-          mode: 'pac_script',
-          pacScript: {
-            data: IP_LOCK_PAC,
-            mandatory: true,
-          },
-        },
-        scope: 'regular',
-      });
-      return;
+    for (const [, setting, value] of HARDENED_PRIVACY_ITEMS()) {
+      try {
+        await setting.set({ value, scope: 'regular' });
+      } catch (err) {
+        console.warn('[PrivacyShield] Privacy setting unavailable:', err?.message || err);
+      }
     }
-
-    const proxy = proxyServerFromSettings(protection);
-    await chrome.proxy.settings.set({
-      value: {
-        mode: 'fixed_servers',
-        rules: {
-          proxyForHttp: proxy,
-          proxyForHttps: proxy,
-          fallbackProxy: proxy,
-          bypassList: [],
-        },
-      },
-      scope: 'regular',
-    });
-
-    await chrome.storage.session.set({
-      proxyStatus: {
-        state: 'proxy',
-        scheme: protection.scheme,
-        host: protection.host,
-        port: protection.port,
-        updatedAt: Date.now(),
-      },
-    });
   } catch (err) {
-    console.error('[PrivacyShield] IP protection apply failed:', err);
-
-    // Fail closed even if the proxy API itself fails. We never deliberately
-    // switch to DIRECT when strict protection is requested.
-    try {
-      await chrome.proxy.settings.set({
-        value: {
-          mode: 'pac_script',
-          pacScript: {
-            data: IP_LOCK_PAC,
-            mandatory: true,
-          },
-        },
-        scope: 'regular',
-      });
-    } catch (_) {}
-
-    await chrome.storage.session.set({
-      proxyStatus: {
-        state: 'locked',
-        error: err?.message || 'Proxy configuration failed',
-        updatedAt: Date.now(),
-      },
-    });
+    console.error('[PrivacyShield] Direct privacy hardening failed:', err);
   }
 }
 
-async function getIpProtectionStatus() {
-  const settings = sanitizeProxySettings((await getSettings()).ipProtection);
-  const current = await getProxySettings();
-  const { proxyOwnership } = await chrome.storage.session.get('proxyOwnership');
-  const { proxyStatus } = await chrome.storage.session.get('proxyStatus');
-
-  let effective = current?.value || null;
-  let state = settings.mode === 'browser_only' ? 'browser_only' : 'locked';
-
-  if (settings.mode === 'proxy_required' && effective?.mode === 'fixed_servers') {
-    state = 'proxy';
+async function getNetworkPrivacyStatus() {
+  const values = {};
+  for (const [key, setting] of HARDENED_PRIVACY_ITEMS()) {
+    try {
+      const current = await setting.get({ scope: 'regular' });
+      values[key] = current?.value ?? null;
+    } catch (_) {
+      values[key] = null;
+    }
   }
 
   return {
-    ...settings,
-    state,
-    effectiveMode: effective?.mode || 'unknown',
-    ownedByExtension: !!proxyOwnership?.owned,
-    lastError: proxyStatus?.error || null,
+    mode: 'direct_hardened',
+    sourceIpVisibility: 'direct_connection_visible',
+    webRtcPolicy: values['network.webRTCIPHandlingPolicy'],
+    networkPrediction: values['network.networkPredictionEnabled'],
+    topicsEnabled: values['websites.topicsEnabled'],
+    fledgeEnabled: values['websites.fledgeEnabled'],
+    adMeasurementEnabled: values['websites.adMeasurementEnabled'],
+    thirdPartyCookiesAllowed: values['websites.thirdPartyCookiesAllowed'],
+    note: 'A direct web connection necessarily exposes its source public IP to the destination server. No browser extension can change the source IP of that direct network connection without an intermediary network layer.',
   };
 }
-
-chrome.proxy?.onProxyError?.addListener((details) => {
-  console.warn('[PrivacyShield] Proxy error:', details);
-  chrome.storage.session.set({
-    proxyStatus: {
-      state: details?.fatal ? 'locked' : 'proxy_error',
-      error: details?.error || details?.details || 'Proxy error',
-      updatedAt: Date.now(),
-    },
-  }).catch(() => {});
-});
 
 // ─── Static Rulesets ───────────────────────────────────────────────────────────
 
@@ -329,6 +220,7 @@ async function applyRuleSets() {
   const wanted = [];
   if (s.enabled && s.modules.headers) wanted.push(HEADER_RULESET_ID);
   if (s.enabled) wanted.push(TRACKER_RULESET_ID);
+  if (s.enabled && s.modules.network) wanted.push('network_rules');
 
   try {
     const current = await chrome.declarativeNetRequest.getEnabledRulesets();
@@ -720,18 +612,8 @@ function sanitizeIncomingSettings(raw) {
 
   if (typeof raw.enabled === 'boolean') out.enabled = raw.enabled;
 
-  if (raw.ipProtection && typeof raw.ipProtection === 'object' && !Array.isArray(raw.ipProtection)) {
-    const ip = raw.ipProtection;
-    const mode = ip.mode === 'browser_only' ? 'browser_only' : 'proxy_required';
-    const scheme = ['http', 'https', 'socks4', 'socks5'].includes(ip.scheme) ? ip.scheme : 'socks5';
-    const host = typeof ip.host === 'string' ? ip.host.trim().toLowerCase().slice(0, 255) : '';
-    const port = Number(ip.port);
-    out.ipProtection = {
-      mode,
-      scheme,
-      host,
-      port: Number.isInteger(port) && port >= 1 && port <= 65535 ? port : 1080,
-    };
+  if (raw.networkPrivacy && typeof raw.networkPrivacy === 'object' && !Array.isArray(raw.networkPrivacy)) {
+    out.networkPrivacy = { mode: 'direct_hardened' };
   }
 
   if (raw.modules && typeof raw.modules === 'object' && !Array.isArray(raw.modules)) {
@@ -825,8 +707,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           break;
         }
 
-        case 'GET_IP_PROTECTION_STATUS': {
-          sendResponse({ success: true, status: await getIpProtectionStatus() });
+        case 'GET_NETWORK_PRIVACY_STATUS': {
+          sendResponse({ success: true, status: await getNetworkPrivacyStatus() });
           break;
         }
 
@@ -947,7 +829,7 @@ async function buildStatus() {
   try { enabledRulesets = await chrome.declarativeNetRequest.getEnabledRulesets(); } catch (_) {}
   try { sessionRuleCount = (await chrome.declarativeNetRequest.getSessionRules()).length; } catch (_) {}
 
-  const ipProtection = await getIpProtectionStatus();
+  const networkPrivacy = await getNetworkPrivacyStatus();
 
   let activeTab = null;
   try {
@@ -978,7 +860,7 @@ async function buildStatus() {
     siteExceptionCount,
     activeTab,
     tabProfile,
-    ipProtection,
+    networkPrivacy,
   };
 }
 
@@ -989,7 +871,7 @@ async function onSettingsChanged(previousSettings, nextSettings) {
   await applyPrivacySettings();
   await applyRuleSets();
   await applySiteExceptionRules();
-  await applyIpProtection();
+  await applyDirectPrivacyPolicy();
   await enqueue(() => rebuildAllSessionRules());
   await broadcastSettingsToTabs();
 
