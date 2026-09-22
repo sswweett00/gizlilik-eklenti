@@ -236,24 +236,12 @@ async function applyRuleSets() {
   }
 }
 
-// ─── Per-Tab Identity → Session DNR Rules ────────────────────────────────────
+// ─── Per-Tab Identity Tracking ───────────────────────────────────────────────
 //
-// inject.js generates a unique profile per tab and reports it through
-// bridge.js. We then make the network layer agree with the JS layer for
-// subsequent requests by rewriting UA / Accept-Language / Sec-CH-UA headers
-// *for that tab only* (session rules, cleared on browser restart). The first
-// navigation request happens before a document_start content script can
-// register its profile, so it is intentionally left untouched rather than
-// being rewritten to a mismatching global identity. Rules are grouped by
-// profile so tabs that roll the same header identity share one rule.
-
-const SESSION_RULE_ID_BASE = 5000;
-const MAX_SESSION_RULES = 900; // DNR hard limit is 1000
-
-const RESOURCE_TYPES = [
-  'main_frame', 'sub_frame', 'xmlhttprequest', 'script',
-  'stylesheet', 'image', 'font', 'object', 'media', 'ping', 'websocket', 'webtransport', 'other',
-];
+// Maximum privacy mode deliberately does not rewrite User-Agent or other low-
+// entropy headers. The browser's native network identity must stay coherent
+// with the first navigation request and Chromium's own Client Hints. We keep
+// only a sanitized per-tab profile for status/rotation bookkeeping.
 
 async function getTabStore() {
   const { tabProfiles } = await chrome.storage.session.get('tabProfiles');
@@ -274,100 +262,24 @@ function sanitizeProfile(p) {
   const langs = Array.isArray(p.languages)
     ? p.languages.filter((l) => str(l, 35)).slice(0, 6)
     : [];
-  const brands = Array.isArray(p.brands)
-    ? p.brands
-        .filter(
-          (b) =>
-            b &&
-            typeof b.brand === 'string' &&
-            b.brand.length > 0 &&
-            b.brand.length <= 40 &&
-            typeof b.version === 'string' &&
-            /^[\d.]+$/.test(b.version)
-        )
-        .slice(0, 6)
-    : [];
 
   return {
     ua,
     languages: langs.length ? langs : ['en-US', 'en'],
-    brands,
-    uaPlatform: str(p.uaPlatform, 40) || 'Windows',
+    uaPlatform: str(p.uaPlatform, 40) || 'Unknown',
     uaMobile: p.uaMobile === true,
-    city: str(p.city, 64) || 'Unknown',
+    city: str(p.city, 64) || 'Hidden',
     timezone: str(p.timezone, 64) || 'UTC',
     platform: str(p.platform, 40) || 'Unknown',
   };
 }
 
-function profileKey(p) {
-  return [
-    p.ua,
-    p.languages.join(','),
-    p.brands.map((b) => `${b.brand}/${b.version}`).join(','),
-    p.uaPlatform,
-    p.uaMobile ? 1 : 0,
-  ].join('|');
-}
-
-function buildHeadersForProfile() {
-  // Do not rewrite User-Agent, Accept-Language or low-entropy Client Hints.
-  // The first navigation request is sent before document_start profile
-  // registration, so per-tab spoofing creates a detectable split identity.
-  // High-entropy Client Hints are already removed by static DNR rules.
-  return [];
-}
-
-function buildSessionRule(ruleId, tabIds, profile) {
-  return {
-    id: ruleId,
-    priority: 1,
-    action: { type: 'modifyHeaders', requestHeaders: buildHeadersForProfile(profile) },
-    condition: {
-      urlFilter: '*',
-      tabIds: tabIds.slice(),
-      resourceTypes: RESOURCE_TYPES,
-    },
-  };
-}
-
-// Does an existing rule already encode exactly this profile's headers?
-function sameHeaders(headers, profile) {
-  if (!Array.isArray(headers)) return false;
-  const want = buildHeadersForProfile(profile);
-  if (headers.length !== want.length) return false;
-  return want.every(
-    (w) =>
-      headers.some(
-        (h) =>
-          h.header === w.header &&
-          h.operation === w.operation &&
-          h.value === w.value
-      )
-  );
-}
-
-// Serialize rule mutations — concurrent REGISTER_PROFILE messages could
-// otherwise read-modify-write the session rules over each other.
-let _ruleQueue = Promise.resolve();
-function enqueue(fn) {
-  const run = _ruleQueue.then(fn, fn);
-  _ruleQueue = run.catch(() => {});
-  return run;
-}
-
 async function registerTabProfile(tabId, rawProfile) {
   const profile = sanitizeProfile(rawProfile);
   if (!profile) return;
-
-  const s = await getSettings();
   const store = await getTabStore();
   store[tabId] = profile;
   await setTabStore(store);
-
-  // Header identity remains native/coherent. No per-tab header rewrite is installed.
-  return;
-
 }
 
 async function unregisterTab(tabId) {
@@ -375,28 +287,11 @@ async function unregisterTab(tabId) {
   if (!(tabId in store)) return;
   delete store[tabId];
   await setTabStore(store);
-
-  await enqueue(async () => {
-    const rules = await chrome.declarativeNetRequest.getSessionRules();
-    const affected = rules.filter((r) => (r.condition.tabIds || []).includes(tabId));
-    if (affected.length === 0) return;
-    const removeRuleIds = affected.map((r) => r.id);
-    const addRules = [];
-    for (const r of affected) {
-      const rest = (r.condition.tabIds || []).filter((t) => t !== tabId);
-      if (rest.length > 0) {
-        addRules.push({ ...r, condition: { ...r.condition, tabIds: rest } });
-      }
-    }
-    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds, addRules });
-  });
 }
 
-// Rebuild every session rule from the stored profiles (used after the
-// headers module / master toggle changed).
+// Legacy session header rules are actively removed at startup/settings changes
+// so upgrades from Privacy Shield <=4.0 cannot retain spoofed header state.
 async function rebuildAllSessionRules() {
-  // 4.1+ deliberately keeps request identity native/coherent. Remove any
-  // legacy session header rules left by earlier versions.
   try {
     const existing = await chrome.declarativeNetRequest.getSessionRules();
     if (existing.length) {
