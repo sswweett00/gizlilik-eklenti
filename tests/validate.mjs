@@ -126,10 +126,17 @@ assert.ok(backgroundSource.includes('HARDENED_CONTENT_SETTINGS'), 'browser-level
 assert.ok(backgroundSource.includes("Site exceptions are disabled in maximum direct mode."), 'maximum mode must reject site exceptions');
 assert.ok(injectSource.includes("securityMode: 'maximum_direct'"), 'injector must default to maximum direct mode');
 assert.ok(injectSource.includes('crypto.getRandomValues'), 'identity seed must prefer Web Crypto entropy');
+assert.ok(!injectSource.includes('Math.random('), 'privacy seed generation must not fall back to Math.random');
+assert.ok(!injectSource.includes("sessionStorage.getItem(STORAGE_KEY)"), 'profile state must not trust page-controlled sessionStorage');
+assert.ok(!injectSource.includes("sessionStorage.setItem(STORAGE_KEY"), 'profile state must not persist into page-controlled sessionStorage');
+assert.ok(!injectSource.includes("sessionStorage.getItem('__ps_cfg')"), 'security settings must not trust page-controlled sessionStorage');
 assert.ok(injectSource.includes('getHighEntropyValues'), 'high-entropy Client Hints must be controlled');
 assert.ok(injectSource.includes('Sensor API disabled by Privacy Shield.'), 'sensor APIs must be blocked');
 assert.ok(injectSource.includes('Credential access'), 'credential APIs must be blocked');
 assert.ok(injectSource.includes('Storage Access API'), 'Storage Access API must be blocked');
+assert.ok(injectSource.includes('Keyboard layout'), 'keyboard layout fingerprinting must be blocked');
+assert.ok(injectSource.includes('Media capabilities'), 'media capability fingerprinting must be blocked');
+assert.ok(injectSource.includes("['geolocation', 'camera', 'microphone', 'notifications', 'push', 'midi']"), 'sensitive permission states must be normalized to denied');
 assert.ok(injectSource.includes('Service Workers'), 'service-worker registration must be blocked');
 assert.ok(injectSource.includes('Push subscription'), 'push subscriptions must be blocked');
 assert.ok(injectSource.includes('const actualUA = String(navigator.userAgent || \'\');'), 'page identity must derive from native UA');
