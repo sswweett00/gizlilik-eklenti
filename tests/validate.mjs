@@ -130,7 +130,7 @@ for (const path of [
   'scripts/linux/privacy-audit.sh',
   'scripts/windows/privacy-audit.ps1',
   'scripts/macos/privacy-audit.sh',
-  ,'docs/BROWSERLEAKS_REMEDIATION.md',
+  'docs/BROWSERLEAKS_REMEDIATION.md',
 ]) {
   const source = read(path);
   assert.ok(source.length > 200, 'deployment/security asset must be non-empty: ' + path);
