@@ -1,4 +1,4 @@
-# Privacy Shield
+# Privacy Shield 3.1
 
 Privacy Shield is a Manifest V3 Chromium extension focused on reducing common browser fingerprinting and tracking signals while keeping the underlying browser behavior as coherent as possible.
 
@@ -75,3 +75,9 @@ Privacy Shield does not use a proxy, VPN or Tor. It hardens browser-side privacy
 Chrome's privacy API exposes the WebRTC IP handling policy and other browser privacy settings, while Declarative Net Request can block and modify supported network requests, including the WebTransport resource type. citeturn126478search0turn126478search1
 
 See SECURITY_ARCHITECTURE.md for the full threat model, data flow, residual risks and production guidance.
+
+## Maximum Direct Privacy
+
+Version 3.1 defaults to a zero-cost `maximum_direct` posture: all privacy modules stay enabled while protection is on, geolocation is denied by default, WebRTC/WebTransport are blocked, and beacon/ping telemetry is blocked. Site exceptions cannot disable the page-world IP/transport protections in this mode.
+
+This does **not** randomize the public IP seen by a destination server. With no proxy, VPN, Tor, relay, or other intermediary, the destination sees the real source IP of the direct network connection. The extension can harden browser-side disclosure and fingerprinting, not rewrite the network source address. Chrome's privacy API exposes WebRTC IP handling and network prediction controls; Declarative Net Request supports blocking request resource types such as `ping` and `webtransport`.
