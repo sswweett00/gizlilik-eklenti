@@ -18,3 +18,13 @@ export function uniqueDomains(values: unknown): string[] {
 export function isHttpUrl(url: unknown): url is string {
   return typeof url === 'string' && /^(?:https?|file):/i.test(url);
 }
+export function isValidTimeZone(value: unknown): value is string {
+  if (value === 'auto') return true;
+  if (typeof value !== 'string' || value.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value }).format();
+    return true;
+  } catch {
+    return false;
+  }
+}
