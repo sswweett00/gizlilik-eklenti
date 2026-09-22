@@ -97,6 +97,9 @@ assert.ok(urlRules.every((rule) => rule.condition.regexFilter.length < 256), 'UR
 assert.ok(urlRules.some((rule) => rule.condition.regexFilter.includes('fbclid')), 'URL cleaner must match fbclid');
 assert.ok(urlRules.every((rule) => rule.action?.redirect?.transform?.queryTransform?.removeParams?.includes('fbclid')), 'URL cleaner must remove fbclid');
 assert.ok(adRules.some((rule) => rule.action?.type === 'block'), 'ad rules must contain blocking rules');
+assert.ok(trackerRules[0].condition.requestDomains.includes('analytics.tiktok.com'), 'tracker rules must include modern telemetry endpoints');
+assert.ok(trackerRules[0].condition.requestDomains.includes('ads.linkedin.com'), 'tracker rules must include LinkedIn telemetry endpoints');
+assert.ok(adRules[0].condition.requestDomains.includes('securepubads.g.doubleclick.net'), 'ad rules must include common publisher ad endpoints');
 assert.ok(
   networkRules.some((rule) => rule.action?.type === 'block' && rule.condition?.resourceTypes?.includes('webtransport')),
   'WebTransport must be blocked in hardened network mode'
