@@ -1,41 +1,67 @@
 /**
- * Privacy Shield v2.2 — bridge.js (ISOLATED world content script)
+ * Privacy Shield — bridge.js (ISOLATED world content script)
  *
  * Relay between inject.js (MAIN world, no chrome.* access) and the
- * background service worker:
- *   - forwards REGISTER_PROFILE / REQUEST_SETTINGS from inject → background
- *   - pushes SETTINGS_UPDATE from background → inject
+ * background service worker.
  *
- * Anti-forgery: the bridge mints a one-time token and announces it to the
- * MAIN world; inject.js only accepts SETTINGS_UPDATE messages carrying it.
- * Note: window.postMessage is a shared bus, so a targeted attacker that
- * sniffs the announcement can still forge messages. Settings changes are
- * re-pushed by the background on every popup save, which overwrites forged
- * values quickly; forged relaxations within that window are a known,
- * documented limitation of MAIN/ISOLATED messaging.
+ * Settings anti-forgery:
+ *   - A non-extractable P-256 private key lives only in this isolated world.
+ *   - MAIN receives only the public verification key.
+ *   - Every SETTINGS_UPDATE is signed and carries a monotonically increasing
+ *     sequence number, preventing forged or replayed relaxations.
  */
 
 'use strict';
 
 (function PsBridge() {
-  function mintToken() {
-    const bytes = new Uint8Array(32);
+  let signingKeyPair = null;
+  let settingsSequence = 0;
+
+  function bytesToBase64(bytes) {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+
+  async function initSigningKey() {
     try {
-      crypto.getRandomValues(bytes);
-      return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      signingKeyPair = await crypto.subtle.generateKey(
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        false,
+        ['sign', 'verify']
+      );
+
+      const publicKeyJwk = await crypto.subtle.exportKey('jwk', signingKeyPair.publicKey);
+      window.postMessage(
+        { __privacyShieldType: 'SETTINGS_VERIFY_KEY', publicKeyJwk },
+        '*'
+      );
+      return true;
     } catch (_) {
-      // The bridge token is authentication for MAIN/ISOLATED messaging only;
-      // fail closed if Web Crypto is unavailable.
-      return '';
+      signingKeyPair = null;
+      return false;
     }
   }
-  const TOKEN = mintToken();
-  if (!TOKEN) return;
 
-  function postSettings(settings) {
+  async function postSettings(settings) {
+    if (!signingKeyPair?.privateKey) return;
+
     try {
+      const sequence = ++settingsSequence;
+      const payload = JSON.stringify({ sequence, settings });
+      const signature = await crypto.subtle.sign(
+        { name: 'ECDSA', hash: 'SHA-256' },
+        signingKeyPair.privateKey,
+        new TextEncoder().encode(payload)
+      );
+
       window.postMessage(
-        { __privacyShieldType: 'SETTINGS_UPDATE', token: TOKEN, settings },
+        {
+          __privacyShieldType: 'SETTINGS_UPDATE',
+          sequence,
+          payload,
+          signature: bytesToBase64(new Uint8Array(signature)),
+        },
         '*'
       );
     } catch (_) {}
@@ -46,7 +72,8 @@
       chrome.runtime
         .sendMessage({ type: 'GET_TAB_SETTINGS' })
         .then((resp) => {
-          if (resp && resp.success) postSettings(resp.settings);
+          if (resp && resp.success) return postSettings(resp.settings);
+          return undefined;
         })
         .catch(() => {});
     } catch (_) {}
@@ -76,16 +103,13 @@
   // background → MAIN world
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg && msg.type === 'SETTINGS_UPDATE' && msg.settings) {
-      postSettings(msg.settings);
+      void postSettings(msg.settings);
       return;
     }
 
     if (msg && msg.type === 'ROTATE_IDENTITY') {
       try {
-        window.postMessage({
-          __privacyShieldType: 'ROTATE_IDENTITY',
-          token: TOKEN,
-        }, '*');
+        window.postMessage({ __privacyShieldType: 'ROTATE_IDENTITY' }, '*');
         sendResponse({ success: true });
       } catch (_) {
         sendResponse({ success: false });
@@ -94,10 +118,9 @@
     }
   });
 
-  // Announce token, then pull current settings so the tab applies them
-  // as early as possible (inject.js caches them to sessionStorage).
-  try {
-    window.postMessage({ __privacyShieldType: 'PS_TOKEN', token: TOKEN }, '*');
-  } catch (_) {}
-  fetchAndPushSettings();
+  // Fail closed: without Web Crypto the MAIN world retains its secure defaults.
+  void initSigningKey().then((ready) => {
+    if (!ready) return;
+    fetchAndPushSettings();
+  });
 })();
