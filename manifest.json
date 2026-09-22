@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Privacy Shield",
-  "version": "4.3.0",
+  "version": "4.3.1",
   "description": "AEGIS-9 browser privacy hardening companion: maximum direct Chromium privacy plus zero-cost Qubes-Whonix/Tor deployment and disposable isolation guidance. No proxy/VPN/Tor dependency inside the extension.",
   "minimum_chrome_version": "128",
   "permissions": [
