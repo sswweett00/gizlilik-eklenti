@@ -33,6 +33,7 @@ const tabIdentityValue   = document.getElementById('tabIdentityValue');
 const geoModeValue       = document.getElementById('geoModeValue');
 const rulesetValue       = document.getElementById('rulesetValue');
 const trackedTabsValue   = document.getElementById('trackedTabsValue');
+const matchedRuleCountValue = document.getElementById('matchedRuleCountValue');
 const currentSiteHost    = document.getElementById('currentSiteHost');
 const identitySummary    = document.getElementById('identitySummary');
 const siteExceptionBtn   = document.getElementById('siteExceptionBtn');
@@ -147,6 +148,7 @@ function renderStatus(status) {
     rulesetValue.textContent = rules.length ? rules.join(', ') : 'Off';
   }
   if (trackedTabsValue) trackedTabsValue.textContent = String(status.trackedTabCount ?? 0);
+  if (matchedRuleCountValue) matchedRuleCountValue.textContent = String(status.matchedRuleCount ?? 0);
 
   const p = status.tabProfile;
   tabIdentityValue.textContent = p
