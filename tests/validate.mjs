@@ -8,7 +8,7 @@ const trackerRules = JSON.parse(read('rules/trackers.json'));
 const networkRules = JSON.parse(read('rules/network.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.3.1');
+assert.equal(manifest.version, '4.3.2');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs']
@@ -105,6 +105,8 @@ for (const marker of [
 }
 
 assert.ok(injectSource.includes('const strictIpLock = true;'), 'WebRTC must be hard-blocked in direct privacy mode');
+assert.ok(injectSource.includes("_prefs.geolocationMode === 'deny'"), 'geolocation API must deny by default');
+assert.ok(injectSource.includes("descriptor.name === 'geolocation'"), 'geolocation permission state must be controlled');
 assert.ok(!injectSource.includes("setLocalDescription', function"), 'strict mode must not patch setLocalDescription at all');
 assert.ok(injectSource.includes('WebTransport disabled by Privacy Shield.'), 'WebTransport must be hard-blocked in the page world');
 assert.ok(injectSource.includes('WebSocket disabled by Privacy Shield.'), 'WebSocket must be hard-blocked in the page world');
@@ -112,7 +114,8 @@ assert.ok(injectSource.includes('EventSource disabled by Privacy Shield.'), 'Eve
 assert.ok(injectSource.includes('Media capture disabled by Privacy Shield.'), 'camera/microphone capture must be blocked in maximum direct mode');
 assert.ok(injectSource.includes("function sendBeacon() { return false; }"), 'sendBeacon must be disabled in maximum direct mode');
 assert.ok(popupSource.includes('Direct Network Privacy'), 'popup must explain direct-connection privacy semantics');
-assert.ok(popupSource.includes('Visible to destination'), 'popup must not falsely claim direct-IP anonymity');
+assert.ok(popupSource.includes('Visible in direct mode'), 'popup must not falsely claim direct-IP anonymity');
+assert.ok(popupSource.includes('IP-location'), 'popup must disclose the IP-location limitation');
 assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum direct security mode must be the default');
 assert.ok(backgroundSource.includes("geolocationMode: 'deny'"), 'geolocation must be deny-by-default');
 assert.ok(new Set([...headerRules, ...trackerRules, ...networkRules].map((rule) => rule.id)).size === headerRules.length + trackerRules.length + networkRules.length, 'all static DNR rule IDs must be globally unique');
@@ -130,6 +133,9 @@ assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must 
 assert.ok(backgroundSource.includes("type !== 'webtransport' && type !== 'ping'"), 'site exceptions must not bypass critical transport/privacy blocks');
 assert.ok(popupSource.includes('Maximum direct mode'), 'popup must expose the maximum direct security posture');
 assert.ok(popupSource.includes('AEGIS-9'), 'popup must expose the AEGIS-9 system anonymity profile');
+for (const domain of ['ipapi.co','ipinfo.io','ipwho.is','ip-api.com','ipgeolocation.io','ipdata.co','freeipapi.com','geolocation-db.com','ipapi.com','ip2location.io']) {
+  assert.ok(networkRules.some((rule) => rule.condition?.requestDomains?.includes(domain)), 'network rules must block common IP geolocation endpoint: ' + domain);
+}
 
 for (const path of [
   'docs/ZERO_COST_DEPLOYMENT.md',
