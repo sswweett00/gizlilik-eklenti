@@ -112,7 +112,7 @@ Expected properties:
 
 ## Privacy Shield Chromium mode
 
-### Direct Hardened
+### Tor-only
 
 For ordinary Chromium sessions without an intermediary:
 
@@ -120,7 +120,7 @@ For ordinary Chromium sessions without an intermediary:
 - Do not interpret `direct hardened` as IP anonymity.
 - Browser-side IP discovery, WebRTC/IP-location lookups and fingerprint surfaces are hardened, but a direct TCP/QUIC destination still sees the real source IP.
 
-### Local Tor — zero-cost browser egress
+### Tor-only — zero-cost browser egress
 
 When Tor is already running locally, Privacy Shield 4.8 can configure Chromium itself to use:
 
@@ -129,8 +129,8 @@ When Tor is already running locally, Privacy Shield 4.8 can configure Chromium i
 127.0.0.1:9150  -> Tor Browser's local SOCKS endpoint
 ~~~
 
-In the Privacy Shield popup choose `Local Tor — fail-closed SOCKS5`, select the matching port, then use `Verify Tor`. The extension stores the previous Chrome proxy configuration, removes proxy bypasses, monitors proxy errors and activates a network kill-switch when the selected Tor endpoint is not active. That prevents a silent return to a direct connection.
+In the Privacy Shield popup choose `Tor-only — fail-closed SOCKS5`, select the matching port, then use `Verify Tor`. The extension stores the previous Chrome proxy configuration, removes proxy bypasses, monitors proxy errors and activates a network kill-switch when the selected Tor endpoint is not active. That prevents a silent return to a direct connection.
 
-Chrome's SOCKS5 implementation resolves target hostnames through the proxy, but it proxies TCP URL requests rather than UDP; Privacy Shield therefore independently blocks WebRTC UDP and WebTransport. This Local Tor path is still not equivalent to Tor Browser's full browser-level anti-fingerprinting and isolation model. For a disposable anonymous session, native Tails + Tor Browser remains the stronger system design.
+Chrome's SOCKS5 implementation resolves target hostnames through the proxy, but it proxies TCP URL requests rather than UDP; Privacy Shield therefore independently blocks WebRTC UDP and WebTransport. This Tor-only path is still not equivalent to Tor Browser's full browser-level anti-fingerprinting and isolation model. For a disposable anonymous session, native Tails + Tor Browser remains the stronger system design.
 
-If Local Tor is unavailable, do not treat the session as anonymous. The extension is intentionally designed to surface the failure rather than silently claim IP protection.
+If Tor-only is unavailable, do not treat the session as anonymous. The extension is intentionally designed to surface the failure rather than silently claim IP protection.
