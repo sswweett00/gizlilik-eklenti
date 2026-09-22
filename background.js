@@ -270,6 +270,7 @@ async function applyRuleSets() {
 
   if (s.enabled) {
     if (s.modules.headers) wanted.push('header_rules');
+    if (s.modules.permissions) wanted.push('permission_rules');
     if (s.modules.trackers) wanted.push('tracker_rules');
     if (s.modules.ads) wanted.push('ad_rules');
     if (s.modules.urlCleaner) wanted.push('url_rules');
