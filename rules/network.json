@@ -224,5 +224,345 @@
         "ping"
       ]
     }
+  },
+  {
+    "id": 313,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "api.ipify.org"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 314,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "api64.ipify.org"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 315,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ipify.org"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 316,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ifconfig.co"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 317,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ifconfig.me"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 318,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "icanhazip.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 319,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ident.me"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 320,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ip.sb"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 321,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "myip.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 322,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "checkip.amazonaws.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 323,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "checkip.dyndns.org"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 324,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "whatismyip.akamai.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 325,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ipv4.icanhazip.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 326,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ipv6.icanhazip.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 327,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "api.my-ip.io"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 328,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "seeip.org"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 329,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ip.seeip.org"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping",
+        "other"
+      ]
+    }
   }
 ]
