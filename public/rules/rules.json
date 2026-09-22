@@ -61,6 +61,20 @@
           "header": "Accept-Language",
           "operation": "set",
           "value": "en-US,en;q=0.9"
+        },
+        {
+          "header": "Referer",
+          "operation": "remove"
+        },
+        {
+          "header": "DNT",
+          "operation": "set",
+          "value": "1"
+        },
+        {
+          "header": "Sec-GPC",
+          "operation": "set",
+          "value": "1"
         }
       ]
     },
