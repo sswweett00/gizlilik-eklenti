@@ -16,16 +16,33 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
 
-      - name: Syntax check
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Legacy JavaScript syntax regression
         run: |
           node --check background.js
           node --check bridge.js
           node --check inject.js
           node --check popup.js
 
-      - name: Static regression checks
-        run: node tests/validate.mjs
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Static security validation
+        run: npm run validate
+
+      - name: Production build
+        run: npm run build
+
+      - name: Verify build manifest
+        run: |
+          test -f dist/manifest.json
+          node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('dist/manifest.json','utf8')); if(m.manifest_version!==3) process.exit(1); if(!m.background?.service_worker) process.exit(1); if(!m.declarative_net_request?.rule_resources?.some(r=>r.id==='url_rules')) process.exit(1); console.log('Built manifest OK')"
