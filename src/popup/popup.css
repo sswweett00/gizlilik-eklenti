@@ -1,2 +1,1 @@
-/* Built from the hardened legacy popup stylesheet during the TypeScript migration. */
-@import url('../../../popup.css');
+@import url('../../popup.css');
