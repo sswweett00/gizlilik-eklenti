@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Privacy Shield",
-  "version": "2.2.0",
-  "description": "Per-tab privacy hardening for fingerprinting, WebRTC, canvas, WebGL, audio, geolocation and timezone signals, with tracker blocking, header consistency, site exceptions, identity rotation and privacy-safe defaults.",
+  "version": "2.3.0",
+  "description": "Fail-closed IP privacy with mandatory proxy routing, WebRTC leak prevention, fingerprint protection, tracker blocking, site exceptions and per-tab identity controls.",
   "minimum_chrome_version": "128",
   "permissions": [
     "privacy",
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
     "storage",
-    "tabs"
+    "tabs",
+    "proxy"
   ],
   "host_permissions": [
     "<all_urls>"
