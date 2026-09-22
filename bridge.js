@@ -18,11 +18,19 @@
 'use strict';
 
 (function PsBridge() {
-  const TOKEN =
-    Date.now().toString(36) +
-    '-' +
-    Math.random().toString(36).slice(2, 10) +
-    Math.random().toString(36).slice(2, 10);
+  function mintToken() {
+    const bytes = new Uint8Array(32);
+    try {
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (_) {
+      // The bridge token is authentication for MAIN/ISOLATED messaging only;
+      // do not fall back to Date.now()/Math.random() entropy.
+      return '';
+    }
+  }
+  const TOKEN = mintToken();
+  if (!TOKEN) return;
 
   function postSettings(settings) {
     try {
