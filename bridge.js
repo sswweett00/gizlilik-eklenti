@@ -1,5 +1,5 @@
 /**
- * Privacy Shield — bridge.js (ISOLATED world content script)
+ * Privacy Shield v2.2 — bridge.js (ISOLATED world content script)
  *
  * Relay between inject.js (MAIN world, no chrome.* access) and the
  * background service worker:
@@ -65,10 +65,24 @@
     false
   );
 
-  // background → MAIN world (settings changed in popup, pushed to every tab)
-  chrome.runtime.onMessage.addListener((msg) => {
+  // background → MAIN world
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg && msg.type === 'SETTINGS_UPDATE' && msg.settings) {
       postSettings(msg.settings);
+      return;
+    }
+
+    if (msg && msg.type === 'ROTATE_IDENTITY') {
+      try {
+        window.postMessage({
+          __privacyShieldType: 'ROTATE_IDENTITY',
+          token: TOKEN,
+        }, '*');
+        sendResponse({ success: true });
+      } catch (_) {
+        sendResponse({ success: false });
+      }
+      return true;
     }
   });
 
