@@ -8,10 +8,10 @@
     "privacy",
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
+    "declarativeNetRequestFeedback",
     "storage",
     "tabs",
-    "contentSettings",
-    "declarativeNetRequestFeedback"
+    "contentSettings"
   ],
   "host_permissions": [
     "<all_urls>"
