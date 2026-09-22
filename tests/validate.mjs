@@ -121,7 +121,10 @@ assert.ok(backgroundSource.includes("scheme: 'socks5'"), 'local Tor mode must us
 assert.ok(backgroundSource.includes('127.0.0.1'), 'local Tor mode must target localhost only');
 assert.ok(!/fallbackProxy\s*:/.test(backgroundSource), 'local Tor mode must not configure a fallback proxy');
 assert.ok(backgroundSource.includes('TOR_KILL_SWITCH_RULE_ID'), 'local Tor mode must define a network kill-switch');
+assert.ok(backgroundSource.includes('incognito_persistent'), 'Local Tor must cover the incognito proxy scope');
+assert.ok(backgroundSource.includes('isAllowedIncognitoAccess'), 'Local Tor must detect incognito access availability');
 assert.ok(backgroundSource.includes("regexFilter: '^https?://'"), 'Tor kill-switch must block direct HTTP(S) traffic');
+assert.ok(popupSource.includes('Allow this extension in Incognito'), 'popup must disclose the incognito coverage prerequisite');
 assert.ok(backgroundSource.includes('setTorKillSwitch(true)'), 'Tor failures must activate the kill-switch');
 assert.ok(popupSource.includes('Verify Tor'), 'popup must expose Tor verification');
 assert.ok(popupSource.includes('Local Tor'), 'popup must expose local Tor path selection');
@@ -252,6 +255,12 @@ assert.ok(read('scripts/macos/privacy-audit.sh').includes('networksetup -listall
 assert.ok(networkRules.some((rule) => rule.condition?.urlFilter === '||httpbin.org/ip'), 'httpbin IP echo must be blocked');
 assert.ok(networkRules.some((rule) => rule.condition?.urlFilter === '||cloudflare.com/cdn-cgi/trace'), 'Cloudflare trace IP endpoint must be blocked');
 assert.ok(networkRules.some((rule) => rule.id === 334 && rule.condition?.requestDomains?.includes('eth0.me')), 'additional IP echo services must be blocked');
+
+for (const name of ['rules','permissions','network','trackers','adblock','url-cleaner']) {
+  const canonical = JSON.parse(read('rules/' + name + '.json'));
+  const publicCopy = JSON.parse(read('public/rules/' + name + '.json'));
+  assert.deepEqual(publicCopy, canonical, 'public/rules copy must match canonical rules/' + name + '.json');
+}
 
 console.log('Privacy Shield v4.8 static validation passed.');
 
