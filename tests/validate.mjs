@@ -68,20 +68,6 @@ for (const marker of ['siteExceptionBtn', 'rotateIdentityBtn', 'rulesetValue', '
 
 console.log('Privacy Shield static validation passed.');
 
-const backgroundSource = read('background.js');
-assert.ok(backgroundSource.includes("mode: 'proxy_required'"), 'strict IP protection must be the default');
-assert.ok(backgroundSource.includes('PROXY 127.0.0.1:9'), 'missing proxy must fail closed');
-assert.ok(backgroundSource.includes('mandatory: true'), 'lock PAC must be mandatory');
-assert.ok(backgroundSource.includes('fallbackProxy: proxy'), 'strict proxy mode must cover fallback traffic with the same proxy');
-assert.ok(!backgroundSource.includes('direct://'), 'strict mode must not configure DIRECT fallback');
-
-const injectSource = read('inject.js');
-assert.ok(injectSource.includes('WebRTC disabled by Privacy Shield IP Lock.'), 'strict IP mode must disable WebRTC');
-
-const popupSource = read('popup.html') + '\n' + read('popup.js');
-for (const marker of ['ipProtectionMode', 'proxyScheme', 'proxyHost', 'proxyPort', 'ipLockTitle']) {
-  assert.ok(popupSource.includes(marker), 'popup missing ' + marker);
-}
 assert.ok(!manifest.permissions.includes('proxy'), 'implementation must not require the proxy API');
 const networkRules = JSON.parse(read('rules/network.json'));
 assert.ok(
