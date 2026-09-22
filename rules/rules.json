@@ -1,0 +1,129 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "User-Agent",
+          "operation": "set",
+          "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        },
+        {
+          "header": "Accept-Language",
+          "operation": "set",
+          "value": "en-US,en;q=0.9"
+        },
+        {
+          "header": "Sec-CH-UA",
+          "operation": "set",
+          "value": "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\""
+        },
+        {
+          "header": "Sec-CH-UA-Platform",
+          "operation": "set",
+          "value": "\"Windows\""
+        },
+        {
+          "header": "Sec-CH-UA-Mobile",
+          "operation": "set",
+          "value": "?0"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "script",
+        "stylesheet",
+        "image",
+        "font",
+        "object",
+        "media",
+        "websocket",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Sec-CH-UA-Arch",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Bitness",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Full-Version",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Full-Version-List",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Model",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Platform-Version",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-WoW64",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-Prefers-Color-Scheme",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-Prefers-Reduced-Motion",
+          "operation": "remove"
+        },
+        {
+          "header": "Device-Memory",
+          "operation": "remove"
+        },
+        {
+          "header": "Downlink",
+          "operation": "remove"
+        },
+        {
+          "header": "ECT",
+          "operation": "remove"
+        },
+        {
+          "header": "RTT",
+          "operation": "remove"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "script",
+        "stylesheet",
+        "image",
+        "font",
+        "object",
+        "media",
+        "websocket",
+        "other"
+      ]
+    }
+  }
+]

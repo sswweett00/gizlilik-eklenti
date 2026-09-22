@@ -1,0 +1,79 @@
+{
+  "manifest_version": 3,
+  "name": "Privacy Shield",
+  "version": "2.1.0",
+  "description": "Zero-leak browser privacy extension: every window gets a unique identity, location, and hardware profile. Blocks fingerprinting, WebRTC leaks, canvas tracking, geolocation abuse, and common ad/tracker networks.",
+  "minimum_chrome_version": "128",
+
+  "permissions": [
+    "privacy",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
+    "scripting",
+    "activeTab",
+    "storage",
+    "webNavigation",
+    "tabs"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Privacy Shield"
+  },
+
+  "content_scripts": [
+    {
+      "js": ["inject.js"],
+      "matches": ["<all_urls>"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true,
+      "world": "MAIN"
+    },
+    {
+      "js": ["bridge.js"],
+      "matches": ["<all_urls>"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true,
+      "world": "ISOLATED"
+    }
+  ],
+
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "header_rules",
+        "enabled": true,
+        "path": "rules/rules.json"
+      },
+      {
+        "id": "tracker_rules",
+        "enabled": true,
+        "path": "rules/trackers.json"
+      }
+    ]
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "web_accessible_resources": []
+}
