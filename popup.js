@@ -28,6 +28,12 @@ const lngInput           = document.getElementById('lngInput');
 const webrtcPolicyValue  = document.getElementById('webrtcPolicyValue');
 const tabIdentityValue   = document.getElementById('tabIdentityValue');
 const geoModeValue       = document.getElementById('geoModeValue');
+const rulesetValue       = document.getElementById('rulesetValue');
+const trackedTabsValue   = document.getElementById('trackedTabsValue');
+const currentSiteHost    = document.getElementById('currentSiteHost');
+const identitySummary    = document.getElementById('identitySummary');
+const siteExceptionBtn   = document.getElementById('siteExceptionBtn');
+const rotateIdentityBtn  = document.getElementById('rotateIdentityBtn');
 const resetBtn           = document.getElementById('resetBtn');
 const moduleToggles      = document.querySelectorAll('.module-toggle');
 const moduleCards        = document.querySelectorAll('.module-card');
@@ -35,6 +41,7 @@ const moduleCards        = document.querySelectorAll('.module-card');
 // ─── State ────────────────────────────────────────────────────────────────────
 
 let currentSettings = null;
+let activeTabInfo = null;
 let saveTimer = null;
 
 // ─── Initialization ───────────────────────────────────────────────────────────
@@ -51,6 +58,11 @@ async function init() {
     if (statusResponse.success) {
       renderStatus(statusResponse.status);
     }
+
+    await refreshActiveTab();
+    moduleToggles.forEach((toggle) => {
+      toggle.setAttribute('aria-label', (toggle.dataset.key || 'protection') + ' protection');
+    });
   } catch (err) {
     console.error('[PrivacyShield Popup] Init error:', err);
     renderErrorState();
@@ -104,10 +116,20 @@ function renderStatus(status) {
   geoModeValue.textContent =
     GEO_MODE_LABELS[status.geolocationMode] || capitalizeFirst(status.geolocationMode);
 
+  if (rulesetValue) {
+    const rules = Array.isArray(status.enabledRulesets) ? status.enabledRulesets : [];
+    rulesetValue.textContent = rules.length ? rules.join(', ') : 'Off';
+  }
+  if (trackedTabsValue) trackedTabsValue.textContent = String(status.trackedTabCount ?? 0);
+
   const p = status.tabProfile;
   tabIdentityValue.textContent = p
-    ? `${p.city} · ${p.timezone} · ${p.platform}`
+    ? p.city + ' · ' + p.timezone + ' · ' + p.platform
     : 'No identity yet (reload the page)';
+
+  if (status.activeTab) {
+    renderSiteInfo({ tab: { id: status.activeTab.id, url: '', host: status.activeTab.host }, excluded: status.activeTab.excluded });
+  }
 }
 
 function renderErrorState() {
@@ -145,7 +167,81 @@ function toggleSpoofLocationSection(show) {
   spoofLocationSection.style.display = show ? 'block' : 'none';
 }
 
+function renderSiteInfo(info) {
+  activeTabInfo = info || null;
+  const host = info?.tab?.host || '';
+  const supported = !!host && !host.startsWith('chrome') && host !== 'newtab';
+
+  if (currentSiteHost) currentSiteHost.textContent = host || 'Unavailable';
+
+  if (identitySummary && currentSettings) {
+    const excluded = !!info?.excluded || (host && (currentSettings.excludedDomains || []).includes(host));
+    identitySummary.textContent = excluded ? 'Privacy disabled for this site' : 'Protected for this tab';
+  }
+
+  if (siteExceptionBtn) {
+    siteExceptionBtn.disabled = !supported;
+    siteExceptionBtn.textContent = info?.excluded ? 'Allow protection' : 'Exclude site';
+  }
+}
+
+async function refreshActiveTab() {
+  try {
+    const response = await sendMessage({ type: 'GET_ACTIVE_TAB' });
+    if (response && response.success) renderSiteInfo(response);
+  } catch (err) {
+    console.error('[PrivacyShield Popup] Active tab lookup failed:', err);
+    renderSiteInfo(null);
+  }
+}
+
 // ─── Event Listeners ──────────────────────────────────────────────────────────
+
+siteExceptionBtn?.addEventListener('click', async () => {
+  siteExceptionBtn.disabled = true;
+  const previous = siteExceptionBtn.textContent;
+  siteExceptionBtn.textContent = 'Updating…';
+  try {
+    const response = await sendMessage({ type: 'TOGGLE_SITE_EXCLUSION' });
+    if (response?.success) {
+      if (response.settings) currentSettings = response.settings;
+      renderSiteInfo({
+        tab: { id: activeTabInfo?.tab?.id, url: activeTabInfo?.tab?.url || '', host: response.host },
+        excluded: response.excluded,
+      });
+      const statusResponse = await sendMessage({ type: 'GET_STATUS' });
+      if (statusResponse.success) renderStatus(statusResponse.status);
+      await refreshActiveTab();
+    } else {
+      siteExceptionBtn.textContent = 'Unavailable';
+      setTimeout(() => { siteExceptionBtn.textContent = previous; }, 1000);
+    }
+  } catch (err) {
+    console.error('[PrivacyShield Popup] Site exception error:', err);
+    siteExceptionBtn.textContent = 'Error';
+    setTimeout(() => { siteExceptionBtn.textContent = previous; }, 1000);
+  } finally {
+    siteExceptionBtn.disabled = false;
+  }
+});
+
+rotateIdentityBtn?.addEventListener('click', async () => {
+  rotateIdentityBtn.disabled = true;
+  rotateIdentityBtn.textContent = 'Rotating…';
+  try {
+    const response = await sendMessage({ type: 'ROTATE_IDENTITY' });
+    if (response?.success) identitySummary.textContent = 'New identity on next load';
+  } catch (err) {
+    console.error('[PrivacyShield Popup] Identity rotation error:', err);
+  } finally {
+    setTimeout(() => {
+      rotateIdentityBtn.textContent = 'Rotate identity';
+      rotateIdentityBtn.disabled = false;
+    }, 800);
+  }
+});
+
+
 
 // Master toggle
 masterToggle.addEventListener('change', () => {
