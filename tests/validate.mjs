@@ -7,7 +7,7 @@ const headerRules = JSON.parse(read('rules/rules.json'));
 const trackerRules = JSON.parse(read('rules/trackers.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '3.0.1');
+assert.equal(manifest.version, '3.0.2');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs']
