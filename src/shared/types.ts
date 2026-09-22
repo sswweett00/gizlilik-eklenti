@@ -6,6 +6,7 @@ export interface ExtensionModules {
   webrtc: boolean; canvas: boolean; webgl: boolean; audio: boolean;
   fonts: boolean; navigator: boolean; screen: boolean; geolocation: boolean;
   timezone: boolean; headers: boolean; permissions: boolean; network: boolean;
+  trackers: boolean; ads: boolean; urlCleaner: boolean; browserPrivacy: boolean;
 }
 export interface ExtensionSettings {
   enabled: boolean;
