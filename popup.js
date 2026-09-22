@@ -81,21 +81,17 @@ function renderUI(settings) {
   // Master toggle
   masterToggle.checked = settings.enabled;
 
-  // Network privacy mode is fixed to direct-hardened; there are no proxy controls.
   updateGlobalStatusIndicator(settings.enabled);
   document.body.classList.toggle('shield-disabled', !settings.enabled);
 
-  // Maximum direct mode keeps all privacy modules enabled and non-negotiable.
-  const maximumMode = settings.securityMode === 'maximum_direct';
-  masterToggle.disabled = maximumMode;
-  masterToggle.setAttribute('aria-disabled', maximumMode ? 'true' : 'false');
+  masterToggle.disabled = false;
+  masterToggle.removeAttribute('aria-disabled');
   moduleToggles.forEach((toggle) => {
     const key = toggle.dataset.key;
     const enabled = settings.modules[key] !== false;
     toggle.checked = enabled;
-    toggle.disabled = maximumMode;
-    toggle.setAttribute('aria-disabled', maximumMode ? 'true' : 'false');
-    toggle.closest('.module-card')?.classList.toggle('module-locked', maximumMode);
+    toggle.disabled = false;
+    toggle.removeAttribute('aria-disabled');
     updateModuleCardState(toggle.closest('.module-card'), enabled);
   });
 
@@ -103,12 +99,12 @@ function renderUI(settings) {
 
   // Timezone
   timezoneSelect.value = settings.timezone || 'auto';
-  timezoneSelect.disabled = maximumMode;
+  timezoneSelect.disabled = !settings.enabled || settings.modules.timezone === false;
 
   // Geolocation mode
   geoModeSelect.value = settings.geolocationMode || 'deny';
-  geoModeSelect.disabled = maximumMode;
-  toggleSpoofLocationSection(settings.geolocationMode === 'custom' && !maximumMode);
+  geoModeSelect.disabled = !settings.enabled || settings.modules.geolocation === false;
+  toggleSpoofLocationSection(settings.geolocationMode === 'custom' && settings.enabled && settings.modules.geolocation !== false);
 
   // Coordinates
   if (settings.spoofedLocation) {
@@ -304,7 +300,7 @@ timezoneSelect.addEventListener('change', () => {
 
 // Geo mode selector
 geoModeSelect.addEventListener('change', () => {
-  if (!currentSettings) return;
+  if (!currentSettings || currentSettings.modules.geolocation === false) return;
   currentSettings.geolocationMode = geoModeSelect.value;
   toggleSpoofLocationSection(geoModeSelect.value === 'custom');
   geoModeValue.textContent =
@@ -314,7 +310,7 @@ geoModeSelect.addEventListener('change', () => {
 
 // Coordinate inputs
 latInput.addEventListener('input', debounce(() => {
-  if (!currentSettings) return;
+  if (!currentSettings || currentSettings.modules.geolocation === false || !currentSettings.spoofedLocation) return;
   const val = parseFloat(latInput.value);
   if (!isNaN(val) && val >= -90 && val <= 90) {
     currentSettings.spoofedLocation.latitude = val;
@@ -323,7 +319,7 @@ latInput.addEventListener('input', debounce(() => {
 }, 500));
 
 lngInput.addEventListener('input', debounce(() => {
-  if (!currentSettings) return;
+  if (!currentSettings || currentSettings.modules.geolocation === false || !currentSettings.spoofedLocation) return;
   const val = parseFloat(lngInput.value);
   if (!isNaN(val) && val >= -180 && val <= 180) {
     currentSettings.spoofedLocation.longitude = val;
