@@ -320,7 +320,6 @@ async function applyNetworkProxy() {
 
     if (torSelected) {
       if (!baseline?.value) {
-        if (isOurTorProxy(current.value, settings.networkPrivacy.torPort)) return;
         await chrome.storage.local.set({
           [NETWORK_PROXY_BASELINE_KEY]: {
             value: current.value || { mode: 'system' },
@@ -332,10 +331,12 @@ async function applyNetworkProxy() {
         value: torProxyConfig(settings.networkPrivacy.torPort),
         scope: 'regular',
       });
+      await chrome.storage.session.remove('lastProxyError');
       return;
     }
 
-    if (baseline?.value && isOurTorProxy(current.value, 9050) || baseline?.value && isOurTorProxy(current.value, 9150)) {
+    const ourTorActive = isOurTorProxy(current.value, 9050) || isOurTorProxy(current.value, 9150);
+    if (baseline?.value && ourTorActive) {
       await chrome.proxy.settings.set({
         value: baseline.value,
         scope: 'regular',
@@ -344,6 +345,7 @@ async function applyNetworkProxy() {
     if (baseline?.value) {
       await chrome.storage.local.remove(NETWORK_PROXY_BASELINE_KEY);
     }
+    await chrome.storage.session.remove('lastProxyError');
   } catch (err) {
     console.error('[PrivacyShield] Local Tor proxy apply/restore failed:', err);
   }
@@ -742,9 +744,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             break;
           }
           try {
+            const currentProxy = await getCurrentProxy();
+            if (!isOurTorProxy(currentProxy?.value, settings.networkPrivacy.torPort)) {
+              throw new Error('The selected local Tor proxy is not active; verification aborted to prevent a direct-network check.');
+            }
             const response = await fetch('https://check.torproject.org/api/ip', {
               cache: 'no-store',
               redirect: 'error',
+              credentials: 'omit',
             });
             if (!response.ok) throw new Error('Tor verification endpoint returned HTTP ' + response.status);
             const payload = await response.json();
