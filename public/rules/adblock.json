@@ -1,0 +1,39 @@
+[
+  {
+    "id": 400,
+    "priority": 100,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "googletagmanager.com",
+        "google-analytics.com",
+        "doubleclick.net",
+        "googlesyndication.com",
+        "adnxs.com",
+        "criteo.com",
+        "criteo.net",
+        "pubmatic.com",
+        "rubiconproject.com",
+        "openx.net",
+        "taboola.com",
+        "outbrain.com",
+        "hotjar.com",
+        "clarity.ms",
+        "segment.io",
+        "segment.com"
+      ],
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "websocket",
+        "media",
+        "other"
+      ]
+    }
+  }
+]
