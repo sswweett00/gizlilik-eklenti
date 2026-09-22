@@ -13,7 +13,7 @@ The achievable security goal is: reduce browser-side fingerprinting, block major
 ### Components
 
 1. Main-world injector: inject.js. Runs at document_start and hardens WebRTC, WebTransport, Canvas, WebGL, Audio, DOM geometry, Navigator, Client Hints, Screen, Geolocation, Permissions, and Timezone APIs.
-2. Isolated bridge: bridge.js. Relays profiles and settings between the page world and extension service worker using a bridge-minted token.
+2. Isolated bridge: bridge.js. Relays profiles and settings between the page world and extension service worker using cryptographically signed settings updates from an isolated-world signing key. The main-world verifier still shares the page JavaScript environment, so the browser's MAIN/ISOLATED trust boundary remains a platform limitation rather than a substitute for a native isolated execution boundary.
 3. Background service worker: background.js. Owns Chrome privacy policies, DNR rules, per-tab identities, validation, site exceptions, rotation, tab lifecycle and status reporting.
 4. Declarative network rules: header_rules, tracker_rules and network_rules. The network ruleset blocks WebTransport and ping/beacon telemetry.
 5. Zero-cost deployment assets: OS audit tools and deployment guidance for Windows, Linux, macOS, native Tails, Tor and Tor Browser. Tor/Tails are intentionally external system components; the extension never attempts to impersonate or reimplement them.
