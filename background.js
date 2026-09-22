@@ -698,6 +698,10 @@ function sanitizeIncomingSettings(raw) {
   return out;
 }
 
+const LOCAL_TOR_FORCED_MODULES = Object.freeze([
+  'webrtc', 'network', 'permissions', 'geolocation', 'browserPrivacy',
+]);
+
 function normalizeSettings(raw) {
   const normalized = deepMerge(DEFAULT_SETTINGS, sanitizeIncomingSettings(raw || {}));
 
@@ -711,6 +715,11 @@ function normalizeSettings(raw) {
     ...DEFAULT_SETTINGS.modules,
     ...(normalized.modules || {}),
   };
+
+  if (normalized.enabled && normalized.networkPrivacy.mode === 'local_tor') {
+    for (const module of LOCAL_TOR_FORCED_MODULES) normalized.modules[module] = true;
+    normalized.geolocationMode = 'deny';
+  }
 
   return normalized;
 }
