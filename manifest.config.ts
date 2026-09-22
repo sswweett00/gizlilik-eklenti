@@ -63,4 +63,13 @@ export default defineManifest({
     '48': 'icons/icon48.png',
     '128': 'icons/icon128.png',
   },
+  browser_specific_settings: {
+    gecko: {
+      id: 'privacyshield@sswweett00.local',
+      strict_min_version: '128.0',
+      data_collection_permissions: {
+        required: ['none'],
+      },
+    },
+  },
 });
