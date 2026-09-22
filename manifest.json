@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Privacy Shield",
-  "version": "4.7.0",
+  "version": "4.8.0",
   "description": "AEGIS-9 browser privacy hardening companion with tracker blocking, URL tracking cleanup, fingerprint hardening and browser-level privacy controls.",
   "minimum_chrome_version": "128",
   "permissions": [
@@ -11,7 +11,8 @@
     "declarativeNetRequestFeedback",
     "storage",
     "tabs",
-    "contentSettings"
+    "contentSettings",
+    "proxy"
   ],
   "host_permissions": [
     "<all_urls>"
