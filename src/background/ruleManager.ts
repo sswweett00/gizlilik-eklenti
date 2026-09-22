@@ -1,5 +1,6 @@
 export const STATIC_RULESET_IDS = Object.freeze([
   'header_rules',
+  'permission_rules',
   'tracker_rules',
   'ad_rules',
   'network_rules',
@@ -10,6 +11,7 @@ export type StaticRulesetId = (typeof STATIC_RULESET_IDS)[number];
 
 export interface StaticRulesetModules {
   headers: boolean;
+  permissions: boolean;
   trackers: boolean;
   ads: boolean;
   network: boolean;
@@ -18,6 +20,7 @@ export interface StaticRulesetModules {
 
 export const RULESET_MODULE_MAP: Readonly<Record<keyof StaticRulesetModules, StaticRulesetId>> = Object.freeze({
   headers: 'header_rules',
+  permissions: 'permission_rules',
   trackers: 'tracker_rules',
   ads: 'ad_rules',
   network: 'network_rules',
