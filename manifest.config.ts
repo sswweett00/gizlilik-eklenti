@@ -56,6 +56,7 @@ const manifest = {
       { id: 'ad_rules', enabled: true, path: 'rules/adblock.json' },
       { id: 'network_rules', enabled: true, path: 'rules/network.json' },
       { id: 'url_rules', enabled: true, path: 'rules/url-cleaner.json' },
+      { id: 'permission_rules', enabled: true, path: 'rules/permissions.json' },
     ],
   },
   content_security_policy: {
