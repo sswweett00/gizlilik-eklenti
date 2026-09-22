@@ -34,5 +34,195 @@
         "websocket"
       ]
     }
+  },
+  {
+    "id": 303,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ipapi.co"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 304,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ipinfo.io"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 305,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ipwho.is"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 306,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ip-api.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 307,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ipgeolocation.io"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 308,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ipdata.co"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 309,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "freeipapi.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 310,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "geolocation-db.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 311,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ipapi.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 312,
+    "priority": 110,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "ip2location.io"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "script",
+        "sub_frame",
+        "image",
+        "ping"
+      ]
+    }
   }
 ]
