@@ -2,7 +2,9 @@
   {
     "id": 400,
     "priority": 100,
-    "action": { "type": "block" },
+    "action": {
+      "type": "block"
+    },
     "condition": {
       "requestDomains": [
         "googletagmanager.com",
@@ -20,10 +22,34 @@
         "hotjar.com",
         "clarity.ms",
         "segment.io",
-        "segment.com"
+        "segment.com",
+        "pagead2.googlesyndication.com",
+        "adservice.google.com",
+        "securepubads.g.doubleclick.net",
+        "stats.g.doubleclick.net",
+        "ads.yahoo.com",
+        "gemini.yahoo.com",
+        "adsrvr.org",
+        "advertising.com",
+        "serving-sys.com",
+        "2mdn.net",
+        "media.net",
+        "teads.tv",
+        "yieldmo.com",
+        "33across.com",
+        "sovrn.com",
+        "lijit.com",
+        "doubleverify.com"
       ],
       "resourceTypes": [
-        "script","image","xmlhttprequest","sub_frame","ping","websocket","media","other"
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "websocket",
+        "media",
+        "other"
       ]
     }
   }
