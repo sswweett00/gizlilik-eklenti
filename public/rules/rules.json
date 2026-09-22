@@ -1,0 +1,106 @@
+[
+  {
+    "id": 1,
+    "priority": 5,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Sec-CH-UA-Arch",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Bitness",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Full-Version",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Full-Version-List",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Model",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-Platform-Version",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-UA-WoW64",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-Prefers-Color-Scheme",
+          "operation": "remove"
+        },
+        {
+          "header": "Sec-CH-Prefers-Reduced-Motion",
+          "operation": "remove"
+        },
+        {
+          "header": "Device-Memory",
+          "operation": "remove"
+        },
+        {
+          "header": "Downlink",
+          "operation": "remove"
+        },
+        {
+          "header": "ECT",
+          "operation": "remove"
+        },
+        {
+          "header": "RTT",
+          "operation": "remove"
+        },
+        {
+          "header": "Accept-Language",
+          "operation": "set",
+          "value": "en-US,en;q=0.9"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "script",
+        "stylesheet",
+        "image",
+        "font",
+        "object",
+        "media",
+        "websocket",
+        "other",
+        "ping",
+        "webtransport"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 5,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        {
+          "header": "X-DNS-Prefetch-Control",
+          "operation": "set",
+          "value": "off"
+        }
+      ]
+    },
+    "condition": {
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame"
+      ]
+    }
+  }
+]
