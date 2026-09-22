@@ -13,7 +13,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   },
   timezone: 'auto',
   geolocationMode: 'deny',
-  spoofedLocation: null,
+  spoofedLocation: { latitude:40.7128, longitude:-74.0060, accuracy:15 },
   excludedDomains: [],
   networkPrivacy: { mode: 'direct_hardened' },
 };
