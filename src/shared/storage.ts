@@ -1,6 +1,6 @@
 import { DEFAULT_LANGUAGES, DEFAULT_LOCALE, DEFAULT_SECURITY_MODE } from './constants';
 import type { ExtensionModules, ExtensionSettings, ExportedSettings } from './types';
-import { uniqueDomains } from './utils';
+import { isValidTimeZone, uniqueDomains } from './utils';
 
 const STORAGE_KEY = 'settings';
 export const DEFAULT_SETTINGS: ExtensionSettings = {
@@ -26,7 +26,7 @@ export function normalizeSettings(input: Partial<ExtensionSettings> | null | und
     enabled: raw.enabled !== false,
     securityMode:'maximum_direct',
     modules,
-    timezone: typeof raw.timezone === 'string' && raw.timezone ? raw.timezone : 'auto',
+    timezone: isValidTimeZone(raw.timezone) ? raw.timezone : 'auto',
     geolocationMode: raw.geolocationMode === 'spoof' || raw.geolocationMode === 'custom' ? raw.geolocationMode : 'deny',
     spoofedLocation: raw.spoofedLocation && Number.isFinite(raw.spoofedLocation.latitude) && Number.isFinite(raw.spoofedLocation.longitude)
       ? {
@@ -48,7 +48,13 @@ export async function loadSettings(): Promise<ExtensionSettings> {
 }
 export async function saveSettings(next: Partial<ExtensionSettings>): Promise<ExtensionSettings> {
   const current = await loadSettings();
-  const normalized = normalizeSettings({ ...current, ...next });
+  const normalized = normalizeSettings({
+    ...current,
+    ...next,
+    modules: { ...current.modules, ...(next.modules ?? {}) },
+    spoofedLocation: { ...current.spoofedLocation, ...(next.spoofedLocation ?? {}) },
+    networkPrivacy: { ...current.networkPrivacy, ...(next.networkPrivacy ?? {}) },
+  });
   await chrome.storage.local.set({ [STORAGE_KEY]: normalized });
   return normalized;
 }
