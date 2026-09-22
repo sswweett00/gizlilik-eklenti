@@ -186,6 +186,9 @@ assert.ok(read('bridge.js').includes("crypto.subtle.sign"), 'bridge must sign se
 assert.ok(read('inject.js').includes("crypto.subtle.verify"), 'injector must verify settings signatures');
 assert.ok(read('inject.js').includes('SETTINGS_VERIFY_KEY'), 'injector must accept only a public verification key');
 assert.ok(injectSource.includes("defProp(Navigator.prototype, 'gpu'"), 'WebGPU must be blocked in maximum direct mode');
+assert.ok(injectSource.includes('OffscreenCanvas'), 'OffscreenCanvas fingerprint surface must be controlled');
+assert.ok(injectSource.includes('MEDIA_QUERY_OVERRIDES'), 'OS media-query fingerprint preferences must be standardized');
+
 assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must disable DNS prefetch hints');
 assert.ok(backgroundSource.includes('const SITE_EXCEPTION_RESOURCE_TYPES'), 'site exceptions must declare an explicit resource allowlist');
 assert.ok(!backgroundSource.includes("'webtransport'") || backgroundSource.includes('network_rules'), 'critical transport handling must remain outside site exceptions');
