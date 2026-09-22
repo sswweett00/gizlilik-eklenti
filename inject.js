@@ -1,5 +1,5 @@
 /**
- * Privacy Shield v2.1 — inject.js
+ * Privacy Shield v2.2 — inject.js
  *
  * Executes at document_start in MAIN world — before ANY page script runs.
  *
@@ -225,11 +225,46 @@
       return arr[Math.floor(rng() * arr.length)];
     }
 
-    const uaEntry     = pick(POOL.userAgents);
-    const locEntry    = pick(POOL.locales);
-    const screenEntry = pick(POOL.screens);
-    const hwEntry     = pick(POOL.hardware);
-    const glEntry     = pick(POOL.webgl);
+    const actualUA = String(navigator.userAgent || '');
+    const uaMajor = (actualUA.match(/(?:Chrome|Edg|Firefox)\/(\d+)/) || [null, '128'])[1];
+    const uaCandidates = POOL.userAgents.filter(function (entry) { return !entry.ua.includes('Safari/605.1.15'); });
+    const rawUaEntry = pick(uaCandidates.length ? uaCandidates : POOL.userAgents);
+    const normalizedUa = rawUaEntry.ua.replace(/(Chrome|Edg)\/\d+(?:\.\d+){0,3}/g, function (_, family) {
+      return family + '/' + uaMajor + '.0.0.0';
+    });
+    const normalizedBrands = rawUaEntry.brands.map(function (brand) {
+      return { brand: brand.brand, version: brand.brand === 'Not-A.Brand' ? '99' : uaMajor };
+    });
+    const uaEntry = {
+      ...rawUaEntry,
+      ua: normalizedUa,
+      brands: normalizedBrands,
+      uaFullVersion: uaMajor + '.0.0.0',
+      uaPlatformVersion: rawUaEntry.uaPlatform === 'Windows' ? '10.0.0' : rawUaEntry.uaPlatform === 'macOS' ? '10.15.7' : '',
+    };
+
+    const locEntry = pick(POOL.locales);
+    const currentInnerW = Math.max(320, Number(window.innerWidth) || 1280);
+    const currentInnerH = Math.max(240, Number(window.innerHeight) || 720);
+    const compatibleScreens = POOL.screens.filter(function (screen) {
+      return screen.w >= currentInnerW && screen.h >= currentInnerH;
+    });
+    const screenEntry = pick(compatibleScreens.length ? compatibleScreens : POOL.screens);
+
+    const actualCores = Math.max(1, Number(navigator.hardwareConcurrency) || 8);
+    const actualMemory = Math.max(1, Number(navigator.deviceMemory) || 8);
+    const compatibleHardware = POOL.hardware.filter(function (hw) {
+      return hw.cores <= actualCores && hw.memory <= actualMemory;
+    });
+    const hwEntry = pick(compatibleHardware.length ? compatibleHardware : POOL.hardware);
+
+    const actualPlatform = String(navigator.platform || '');
+    const compatibleGL = POOL.webgl.filter(function (gpu) {
+      if (/^Mac/i.test(actualPlatform)) return gpu.vendor.includes('Apple') || gpu.vendor.includes('Intel');
+      if (/Win/i.test(actualPlatform)) return !gpu.vendor.includes('Apple');
+      return !gpu.vendor.includes('Apple');
+    });
+    const glEntry = pick(compatibleGL.length ? compatibleGL : POOL.webgl);
 
     // Add a tiny geographic jitter so even the same city pick varies (±~3km)
     const latJitter = (rng2() - 0.5) * 0.06;
@@ -291,7 +326,7 @@
     enabled: true,
     webrtc: true, canvas: true, webgl: true, audio: true,
     fonts: true, navigator: true, screen: true, geolocation: true,
-    timezone: true,
+    timezone: true, permissions: true,
   };
 
   // Non-flag preferences pushed from the background via bridge.js.
@@ -299,6 +334,7 @@
     geolocationMode: 'spoof', // 'deny' | 'spoof' (per-tab city) | 'custom'
     timezone: 'auto',        // 'auto' = per-tab timezone
     spoofedLocation: null,   // { latitude, longitude } used by 'custom' mode
+    excludedDomains: [],
   };
 
   let _modules = { ...MODULE_DEFAULTS };
@@ -313,7 +349,14 @@
     }
   } catch (_) {}
 
-  const on = (mod) => _modules.enabled && _modules[mod] !== false;
+  function isExcludedHost() {
+    const host = String(location.hostname || '').toLowerCase();
+    return Array.isArray(_prefs.excludedDomains) && _prefs.excludedDomains.some(function (domain) {
+      return host === domain || host.endsWith('.' + domain);
+    });
+  }
+
+  const on = (mod) => _modules.enabled && _modules[mod] !== false && !isExcludedHost();
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 5: NATIVE toString SHIELD (anti-proxy-detection)
@@ -493,30 +536,35 @@
      * temporarily in place, then restore the original pixels — the page's
      * canvas is never permanently altered.
      */
-    function withNoisedCanvas(canvas, fn) {
+    function buildNoisedCanvas(source) {
       let ctx = null;
-      try { ctx = canvas.getContext('2d'); } catch (_) {}
-      const w = canvas.width;
-      const h = canvas.height;
-      if (!ctx || !w || !h) return fn();
+      try { ctx = source.getContext('2d'); } catch (_) {}
+      const w = source.width;
+      const h = source.height;
+      if (!ctx || !w || !h) return null;
       try {
         const current = rawGetImageData.call(ctx, 0, 0, w, h);
         const noised = new ImageData(new Uint8ClampedArray(current.data), w, h);
         noisifyRegion(noised.data, 0, 0, w, w);
-        rawPutImageData.call(ctx, noised, 0, 0);
-        try { return fn(); }
-        finally { rawPutImageData.call(ctx, current, 0, 0); }
+        const temp = document.createElement('canvas');
+        temp.width = w;
+        temp.height = h;
+        const tempCtx = temp.getContext('2d');
+        tempCtx.putImageData(noised, 0, 0);
+        return temp;
       } catch (_) {
-        return fn(); // tainted/odd contexts: let the original call behave normally
+        return null;
       }
     }
 
     overrideMethod(HTMLCanvasElement.prototype, 'toDataURL', function (orig, args) {
-      return withNoisedCanvas(this, () => orig.apply(this, args));
+      const temp = buildNoisedCanvas(this);
+      return temp ? orig.apply(temp, args) : orig.apply(this, args);
     });
 
     overrideMethod(HTMLCanvasElement.prototype, 'toBlob', function (orig, args) {
-      return withNoisedCanvas(this, () => orig.apply(this, args));
+      const temp = buildNoisedCanvas(this);
+      return temp ? orig.apply(temp, args) : orig.apply(this, args);
     });
 
     overrideMethod(CanvasRenderingContext2D.prototype, 'getImageData', function (orig, args) {
@@ -559,20 +607,10 @@
       });
     }
 
-    function patchGetExtension(proto) {
-      overrideMethod(proto, 'getExtension', function (orig, [name]) {
-        if (name === 'WEBGL_debug_renderer_info') {
-          return { UNMASKED_VENDOR_WEBGL: 0x9245, UNMASKED_RENDERER_WEBGL: 0x9246 };
-        }
-        return orig.call(this, name);
-      });
-    }
-
     for (const C of [window.WebGLRenderingContext, window.WebGL2RenderingContext]) {
       if (C) {
         patchGetParameter(C.prototype);
         patchReadPixels(C.prototype);
-        patchGetExtension(C.prototype);
       }
     }
   }
@@ -583,64 +621,46 @@
 
   if (on('audio')) {
     const AUDIO_SEED = (TAB.seed ^ 0xA0D10C) >>> 0;
-    const NOISE_AMP = 1e-7; // sub-audible, imperceptible
-
-    function addAudioNoise(buf) {
-      if (!buf) return;
-      for (let i = 0; i < buf.length; i++) {
-        buf[i] += (noiseUnit(AUDIO_SEED, i) - 0.5) * 2 * NOISE_AMP;
-      }
-    }
-
-    // getChannelData returns the LIVE underlying channel array — without a
-    // guard every call would stack another noise layer on the same buffer.
-    const _noisedArrays = new WeakSet();
-    function noiseOnce(buf) {
-      if (buf && !_noisedArrays.has(buf)) {
-        _noisedArrays.add(buf);
-        addAudioNoise(buf);
-      }
-    }
-
-    if (window.AudioBuffer) {
-      overrideMethod(AudioBuffer.prototype, 'getChannelData', function (orig, args) {
-        const ch = orig.apply(this, args);
-        noiseOnce(ch);
-        return ch;
-      });
-
-      if (AudioBuffer.prototype.copyToChannel) {
-        overrideMethod(AudioBuffer.prototype, 'copyToChannel', function (orig, args) {
-          orig.apply(this, args);
-          if (args[0] instanceof Float32Array) addAudioNoise(args[0]);
-        });
-      }
-    }
 
     if (window.AnalyserNode) {
       overrideMethod(AnalyserNode.prototype, 'getFloatFrequencyData', function (orig, [arr]) {
         orig.call(this, arr);
-        if (arr) for (let i = 0; i < arr.length; i++) {
-          arr[i] += (noiseUnit(AUDIO_SEED, i) - 0.5) * 0.1;
-        }
+        if (arr) for (let i = 0; i < arr.length; i++) arr[i] += (noiseUnit(AUDIO_SEED, i) - 0.5) * 0.1;
       });
-
       overrideMethod(AnalyserNode.prototype, 'getByteFrequencyData', function (orig, [arr]) {
         orig.call(this, arr);
-        if (arr) for (let i = 0; i < arr.length; i++) {
-          arr[i] = clampByte(arr[i] + (noiseUnit(AUDIO_SEED, i) < 0.5 ? 1 : -1));
-        }
+        if (arr) for (let i = 0; i < arr.length; i++) arr[i] = clampByte(arr[i] + (noiseUnit(AUDIO_SEED, i) < 0.5 ? 1 : -1));
       });
-
       overrideMethod(AnalyserNode.prototype, 'getFloatTimeDomainData', function (orig, [arr]) {
         orig.call(this, arr);
-        if (arr) for (let i = 0; i < arr.length; i++) {
-          arr[i] += (noiseUnit(AUDIO_SEED, i) - 0.5) * 2 * NOISE_AMP;
-        }
+        if (arr) for (let i = 0; i < arr.length; i++) arr[i] += (noiseUnit(AUDIO_SEED, i) - 0.5) * 2e-7;
+      });
+      overrideMethod(AnalyserNode.prototype, 'getByteTimeDomainData', function (orig, [arr]) {
+        orig.call(this, arr);
+        if (arr) for (let i = 0; i < arr.length; i++) arr[i] = clampByte(arr[i] + (noiseUnit(AUDIO_SEED, i) < 0.5 ? 1 : -1));
+      });
+    }
+
+    if (window.OfflineAudioContext) {
+      overrideMethod(OfflineAudioContext.prototype, 'startRendering', function (orig, args) {
+        return orig.apply(this, args).then(function (buffer) {
+          try {
+            const nativeGet = buffer.getChannelData.bind(buffer);
+            Object.defineProperty(buffer, 'getChannelData', {
+              value: markNative(function getChannelData(channel) {
+                const raw = nativeGet(channel);
+                const copy = new Float32Array(raw);
+                for (let i = 0; i < copy.length; i++) copy[i] += (noiseUnit(AUDIO_SEED, i) - 0.5) * 2e-7;
+                return copy;
+              }, 'getChannelData'),
+              configurable: true, writable: true,
+            });
+          } catch (_) {}
+          return buffer;
+        });
       });
     }
   }
-
   // ═══════════════════════════════════════════════════════════════════════════
   // MODULE 5: FONT ENUMERATION & DOM GEOMETRY PROTECTION
   // ═══════════════════════════════════════════════════════════════════════════
@@ -700,16 +720,7 @@
       });
     }
 
-    if (document.fonts && typeof document.fonts.check === 'function') {
-      const _origCheck = document.fonts.check.bind(document.fonts);
-      const COMMON = /arial|helvetica|times new roman|courier|verdana|georgia|palatino|garamond|tahoma|trebuchet|impact|comic sans|roboto|open sans/i;
-      Object.defineProperty(document.fonts, 'check', {
-        value: markNative(function check(font, text) {
-          return COMMON.test(font) ? _origCheck(font, text) : false;
-        }, 'check'),
-        writable: true, configurable: true,
-      });
-    }
+    // Keep FontFaceSet.check native; broad false negatives break legitimate pages.
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -773,7 +784,37 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 7: CLIENT HINTS NEUTRALIZATION (per-tab profile)
+  // MODULE 7: PERMISSIONS API COHERENCE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (on('permissions') && navigator.permissions && navigator.permissions.query) {
+    const _permissionQuery = navigator.permissions.query.bind(navigator.permissions);
+    function makePermissionStatus(state) {
+      try {
+        const status = new EventTarget();
+        if (window.PermissionStatus && PermissionStatus.prototype) Object.setPrototypeOf(status, PermissionStatus.prototype);
+        let onchange = null;
+        Object.defineProperty(status, 'state', { get: function () { return state; }, configurable: true });
+        Object.defineProperty(status, 'onchange', {
+          get: function () { return onchange; },
+          set: function (fn) { onchange = typeof fn === 'function' ? fn : null; },
+          configurable: true
+        });
+        return status;
+      } catch (_) { return { state: state }; }
+    }
+    Object.defineProperty(navigator.permissions, 'query', {
+      value: markNative(function query(descriptor) {
+        if (descriptor && descriptor.name === 'geolocation' && on('geolocation')) {
+          return Promise.resolve(makePermissionStatus(_prefs.geolocationMode === 'deny' ? 'denied' : 'granted'));
+        }
+        return _permissionQuery(descriptor);
+      }, 'query'),
+      writable: true, configurable: true,
+    });
+  }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MODULE 8: CLIENT HINTS NEUTRALIZATION (per-tab profile)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('navigator') && navigator.userAgentData) {
@@ -813,7 +854,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 8: SCREEN OVERRIDES (per-tab profile)
+  // MODULE 9: SCREEN OVERRIDES (per-tab profile)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('screen')) {
@@ -849,7 +890,7 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 9: GEOLOCATION SPOOFING (per-tab city + micro-jitter)
+  // MODULE 10: GEOLOCATION SPOOFING (per-tab city + micro-jitter)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('geolocation')) {
@@ -919,16 +960,16 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 10: TIMEZONE & Intl SPOOFING (per-tab timezone)
+  // MODULE 11: TIMEZONE & Intl SPOOFING (per-tab timezone)
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (on('timezone')) {
     // Compute spoofed offset in minutes (getTimezoneOffset sign convention)
-    function calcOffset(tz) {
+    function calcOffset(tz, ms) {
       try {
-        const now = new Date();
-        const utcMs   = Date.parse(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-        const localMs = Date.parse(now.toLocaleString('en-US', { timeZone: tz }));
+        const sample = new Date(ms);
+        const utcMs = Date.parse(sample.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const localMs = Date.parse(sample.toLocaleString('en-US', { timeZone: tz }));
         return (utcMs - localMs) / 60000;
       } catch (_) { return 0; }
     }
@@ -942,30 +983,33 @@
 
     const _offsetCache = new Map();
     const _zoneNameCache = new Map();
-    function offsetFor(tz) {
-      if (!_offsetCache.has(tz)) _offsetCache.set(tz, calcOffset(tz));
-      return _offsetCache.get(tz);
+    function dateCacheKey(tz, ms) {
+      const d = new Date(ms);
+      return tz + '|' + d.getUTCFullYear() + '-' + d.getUTCMonth() + '-' + d.getUTCDate();
     }
-    function zoneNameFor(tz) {
-      if (!_zoneNameCache.has(tz)) {
+    function offsetFor(tz, ms) {
+      const key = dateCacheKey(tz, ms);
+      if (!_offsetCache.has(key)) _offsetCache.set(key, calcOffset(tz, ms));
+      return _offsetCache.get(key);
+    }
+    function zoneNameFor(tz, ms) {
+      const key = dateCacheKey(tz, ms);
+      if (!_zoneNameCache.has(key)) {
         let name = '';
         try {
-          const parts = new Intl.DateTimeFormat('en-US', {
-            timeZone: tz,
-            timeZoneName: 'long',
-          }).formatToParts(new Date());
+          const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'long' }).formatToParts(new Date(ms));
           const p = parts.find((pp) => pp.type === 'timeZoneName');
           name = p ? p.value : '';
         } catch (_) {}
-        _zoneNameCache.set(tz, name);
+        _zoneNameCache.set(key, name);
       }
-      return _zoneNameCache.get(tz);
+      return _zoneNameCache.get(key);
     }
 
     // Date.prototype.getTimezoneOffset
     Object.defineProperty(Date.prototype, 'getTimezoneOffset', {
       value: markNative(function getTimezoneOffset() {
-        return offsetFor(currentTZ());
+        return offsetFor(currentTZ(), this.getTime());
       }, 'getTimezoneOffset'),
       writable: true,
       configurable: true,
@@ -980,7 +1024,7 @@
     const p2 = (n) => String(n).padStart(2, '0');
 
     function specStamp(ms, wantDate, wantTime) {
-      const off = offsetFor(currentTZ()); // minutes; local wall clock = ms - off
+      const off = offsetFor(currentTZ(), ms); // minutes; local wall clock = ms - off
       const d = new Date(ms - off * 60000);
       const out = [];
       if (wantDate) {
@@ -1003,8 +1047,9 @@
     ]) {
       Object.defineProperty(Date.prototype, method, {
         value: markNative(function () {
-          const s = specStamp(this.getTime(), wantDate, wantTime);
-          return withName ? `${s} (${zoneNameFor(currentTZ())})` : s;
+          const timeMs = this.getTime();
+          const s = specStamp(timeMs, wantDate, wantTime);
+          return withName ? s + ' (' + zoneNameFor(currentTZ(), timeMs) + ')' : s;
         }, method),
         writable: true,
         configurable: true,
@@ -1100,6 +1145,13 @@
       return;
     }
 
+    if (d.__privacyShieldType === 'ROTATE_IDENTITY') {
+      if (_bridgeToken && d.token === _bridgeToken) {
+        try { sessionStorage.removeItem('__ps_v2_profile'); } catch (_) {}
+      }
+      return;
+    }
+
     if (d.__privacyShieldType !== 'SETTINGS_UPDATE') return;
     // Require the bridge-minted token: blocks accidental/naive forgery by
     // page scripts (see bridge.js header for the residual-risk note).
@@ -1115,6 +1167,9 @@
       if (typeof s.timezone === 'string' && s.timezone) _prefs.timezone = s.timezone;
       if (s.spoofedLocation && typeof s.spoofedLocation === 'object') {
         _prefs.spoofedLocation = s.spoofedLocation;
+      }
+      if (Array.isArray(s.excludedDomains)) {
+        _prefs.excludedDomains = s.excludedDomains.filter(function (domain) { return typeof domain === 'string'; }).map(function (domain) { return domain.toLowerCase(); }).slice(0, 100);
       }
       persistCfg();
     } catch (_) {}
