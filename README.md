@@ -1,6 +1,6 @@
-# Privacy Shield 4.8
+# Privacy Shield 4.9
 
-Privacy Shield is a Manifest V3 Chromium-first privacy extension with hardened direct-connection controls and an optional zero-cost local Tor SOCKS5 egress mode.
+Privacy Shield is a Manifest V3 Chromium-first privacy extension with mandatory Tor-only website egress with zero-cost local Tor SOCKS5 and browser hardening.
 
 ## Implemented architecture
 
@@ -52,10 +52,11 @@ npm run build
 
 The CI workflow runs the same validation sequence and verifies the generated dist/manifest.json.
 
-## Network path modes
+## Network path
 
-- **Direct Hardened:** no intermediary. Browser-side IP discovery, WebRTC/STUN and common IP-echo/IP-geolocation endpoints are blocked, but the destination can still see the public source IP.
-- **Local Tor:** uses Chromium's browser proxy API with a localhost SOCKS5 Tor endpoint. The mode intentionally has no fallback proxy. When the Tor endpoint is unavailable, browser web requests are expected to fail instead of silently going direct. SOCKS5 handles TCP-based web traffic; WebRTC UDP is independently disabled by the privacy policy.
+- **Tor-only:** Chromium is forced onto `127.0.0.1:9050` or `127.0.0.1:9150` through SOCKS5. The extension configures no direct fallback or bypass list and keeps a network kill-switch active until the Tor exit is verified.
+- Settings are normalized back to Tor-only even if an old configuration, import file or direct-mode value is supplied.
+- When the Tor endpoint is unavailable, browser web requests fail closed instead of using the public source IP. SOCKS5 handles TCP-based web traffic; WebRTC UDP is independently disabled.
 
 This mode is zero-cost when Tor is running locally. It is a network-path integration, not a reimplementation of Tor, and it should not be treated as equivalent to Tor Browser's complete anti-fingerprinting and isolation model.
 
