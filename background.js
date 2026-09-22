@@ -46,7 +46,7 @@ const DEFAULT_SETTINGS = {
   },
   excludedDomains: [],
   networkPrivacy: {
-    mode: 'direct_hardened',
+    mode: 'local_tor',
     torPort: 9050,
   },
 };
@@ -880,8 +880,9 @@ function normalizeSettings(raw) {
   const normalized = deepMerge(DEFAULT_SETTINGS, sanitizeIncomingSettings(raw || {}));
 
   normalized.securityMode = 'maximum_direct';
+  normalized.enabled = true;
   normalized.networkPrivacy = {
-    mode: normalized.networkPrivacy?.mode === 'local_tor' ? 'local_tor' : 'direct_hardened',
+    mode: 'local_tor',
     torPort: normalized.networkPrivacy?.torPort === 9150 ? 9150 : 9050,
   };
   normalized.excludedDomains = Array.isArray(normalized.excludedDomains) ? normalized.excludedDomains : [];
