@@ -1,5 +1,5 @@
 import { DEFAULT_LANGUAGES, DEFAULT_LOCALE, DEFAULT_SECURITY_MODE } from './constants';
-import type { ExtensionModules, ExtensionSettings, ExportedSettings } from './types';
+import type { ExtensionModules, ExtensionSettings, ExtensionSettingsPatch, ExportedSettings } from './types';
 import { isValidTimeZone, uniqueDomains } from './utils';
 
 const STORAGE_KEY = 'settings';
@@ -46,7 +46,7 @@ export async function loadSettings(): Promise<ExtensionSettings> {
   const result = await chrome.storage.local.get(STORAGE_KEY);
   return normalizeSettings(result[STORAGE_KEY] as Partial<ExtensionSettings> | undefined);
 }
-export async function saveSettings(next: Partial<ExtensionSettings>): Promise<ExtensionSettings> {
+export async function saveSettings(next: ExtensionSettingsPatch): Promise<ExtensionSettings> {
   const current = await loadSettings();
   const normalized = normalizeSettings({
     ...current,
