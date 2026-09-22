@@ -1,6 +1,6 @@
 export type SecurityMode = 'maximum_direct';
 export type GeolocationMode = 'deny' | 'spoof' | 'custom';
-export type NetworkMode = 'direct_hardened' | 'local_tor';
+export type NetworkMode = 'local_tor';
 
 export interface ExtensionModules {
   webrtc: boolean; canvas: boolean; webgl: boolean; audio: boolean;
