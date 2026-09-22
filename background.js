@@ -536,12 +536,36 @@ function normalizeSettings(raw) {
 function settingsRequireReload(previous, next) {
   if (!previous || !next) return true;
   if (previous.enabled !== next.enabled) return true;
-  if (JSON.stringify(previous.excludedDomains || []) !== JSON.stringify(next.excludedDomains || [])) return true;
 
   const reloadModules = Object.keys(DEFAULT_SETTINGS.modules);
   return reloadModules.some((key) => previous.modules?.[key] !== next.modules?.[key]);
 }
 
+async function reloadTabsForDomainChanges(previous, next) {
+  const before = new Set(previous?.excludedDomains || []);
+  const after = new Set(next?.excludedDomains || []);
+  const changedDomains = [...new Set([
+    ...[...before].filter((domain) => !after.has(domain)),
+    ...[...after].filter((domain) => !before.has(domain)),
+  ])];
+
+  if (!changedDomains.length) return;
+
+  const tabs = await chrome.tabs.query({});
+  await Promise.allSettled(
+    tabs
+      .filter((tab) => typeof tab.id === 'number' && typeof tab.url === 'string' && /^(https?|file):/i.test(tab.url))
+      .filter((tab) => {
+        try {
+          const host = new URL(tab.url).hostname.toLowerCase();
+          return changedDomains.some((domain) => domainMatchesHost(host, domain));
+        } catch (_) {
+          return false;
+        }
+      })
+      .map((tab) => chrome.tabs.reload(tab.id))
+  );
+}
 
 async function reloadProtectionTabs() {
   const tabs = await chrome.tabs.query({});
@@ -782,6 +806,8 @@ async function applySettingsRuntime(previousSettings, nextSettings) {
 
   if (settingsRequireReload(previousSettings, settings)) {
     await reloadProtectionTabs();
+  } else {
+    await reloadTabsForDomainChanges(previousSettings, settings);
   }
 
   lastAppliedSettingsFingerprint = settingsFingerprint(settings);
