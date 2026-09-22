@@ -50,20 +50,38 @@
       </div>
     </div>
 
+    <div class="preset-row">
+      <label class="preset-label" for="networkModeSelect">Network path</label>
+      <select id="networkModeSelect" class="preset-select">
+        <option value="direct_hardened">Direct hardened — no intermediary</option>
+        <option value="local_tor">Local Tor — fail-closed SOCKS5</option>
+      </select>
+    </div>
+
+    <div class="preset-row" id="torPortRow" hidden>
+      <label class="preset-label" for="torPortSelect">Tor SOCKS5</label>
+      <select id="torPortSelect" class="preset-select">
+        <option value="9050">127.0.0.1:9050 · Tor service</option>
+        <option value="9150">127.0.0.1:9150 · Tor Browser</option>
+      </select>
+      <button class="site-btn" id="verifyTorBtn" type="button">Verify Tor</button>
+    </div>
+
     <div class="status-grid">
       <div class="status-item">
         <span class="status-item-label">Network</span>
-        <span class="status-item-value">Direct</span>
+        <span class="status-item-value" id="networkModeValue">Direct hardened</span>
       </div>
       <div class="status-item">
         <span class="status-item-label">Public IP / IP location</span>
-        <span class="status-item-value">Visible in direct mode</span>
+        <span class="status-item-value" id="networkVisibilityValue">Visible in direct mode</span>
       </div>
     </div>
 
     <p class="site-help"><strong>Independent controls:</strong> every protection module below can be enabled or disabled separately. The master switch disables the entire extension policy.</p>
     <p class="site-help"><strong>Location boundary:</strong> the Geolocation API is blocked and common IP-location API lookups are denied, but a website can still derive approximate location from the public IP that receives the connection.</p>
-    <p class="site-help"><strong>Important:</strong> this Chromium extension cannot hide the source IP, ISP/ASN, TCP/IP fingerprint, JA3/JA4 or complete HTTP/2 fingerprint of a direct connection. To hide IP-based location from the destination, the browser must use Tor, VPN, proxy, or another intermediary network path.</p>
+    <p class="site-help"><strong>Direct mode:</strong> the extension blocks browser-side IP discovery, WebRTC/STUN, IP-location services and related leak surfaces, but the destination still sees the source public IP.</p>
+    <p class="site-help"><strong>Local Tor mode:</strong> routes browser HTTP(S) traffic through <code>127.0.0.1</code> via SOCKS5 with no direct fallback. It is zero-cost when Tor is running locally; if Tor is unavailable, web requests fail closed instead of falling back to your normal public IP.</p>
     <p class="site-help"><strong>AEGIS-9:</strong> for zero-cost website-visible IP anonymity, use Qubes R4.3 + Whonix 18 with <code>anon-whonix → sys-whonix → Tor</code> and a Whonix disposable template. See the repository deployment guide.</p>
   </section>
 
@@ -388,7 +406,7 @@
   <!-- Footer -->
   <footer class="footer">
     <button class="btn-reset" id="resetBtn" title="Reset all settings to defaults">Reset Defaults</button>
-    <a class="footer-version" href="../options/options.html">v4.6.0 · Options</a>
+    <a class="footer-version" href="../options/options.html">v4.8.0 · Options</a>
   </footer>
 
   <script type="module" src="./popup.ts"></script>
