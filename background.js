@@ -234,10 +234,19 @@ async function getNetworkPrivacyStatus() {
   }
 
   let proxyState = null;
-  try { proxyState = await getCurrentProxy(); } catch (_) {}
+  let incognitoProxyState = null;
+  let incognitoAllowed = false;
+  try {
+    proxyState = await getCurrentProxy(false);
+    incognitoProxyState = await getCurrentProxy(true);
+    incognitoAllowed = chrome.extension?.isAllowedIncognitoAccess
+      ? await chrome.extension.isAllowedIncognitoAccess().catch(() => false)
+      : false;
+  } catch (_) {}
 
   const torExpected = settings.enabled && settings.networkPrivacy.mode === 'local_tor';
   const torConfigured = torExpected && isOurTorProxy(proxyState?.value, settings.networkPrivacy.torPort);
+  const torIncognitoConfigured = torExpected && isOurTorProxy(incognitoProxyState?.value, settings.networkPrivacy.torPort);
   const torVerification = (await chrome.storage.session.get('torVerification')).torVerification || null;
   const torActive = torConfigured && torVerification?.verified === true;
   const lastProxyError = (await chrome.storage.session.get('lastProxyError')).lastProxyError || null;
@@ -251,6 +260,8 @@ async function getNetworkPrivacyStatus() {
     proxyMode: settings.networkPrivacy.mode,
     torPort: settings.networkPrivacy.torPort,
     proxyConfigured: torConfigured,
+    incognitoAccessAllowed: incognitoAllowed,
+    incognitoProxyConfigured: torIncognitoConfigured,
     proxyActive: torActive,
     torVerified: torActive,
     torExitIp: torVerification?.exitIp || null,
@@ -273,6 +284,7 @@ async function getNetworkPrivacyStatus() {
 // ─── Zero-cost local Tor egress ────────────────────────────────────────────────
 
 const NETWORK_PROXY_BASELINE_KEY = 'networkProxyBaseline';
+const NETWORK_PROXY_INCOGNITO_SCOPE = 'incognito_persistent';
 const TOR_PROXY_HOST = '127.0.0.1';
 const TOR_KILL_SWITCH_RULE_ID = 19000;
 const TOR_KILL_SWITCH_PRIORITY = 20000;
@@ -307,9 +319,9 @@ function isOurTorProxy(value, port = 9050) {
     !rules.bypassList?.length;
 }
 
-async function getCurrentProxy() {
+async function getCurrentProxy(incognito = false) {
   try {
-    return await chrome.proxy.settings.get({ incognito: false });
+    return await chrome.proxy.settings.get({ incognito });
   } catch (err) {
     return { value: null, levelOfControl: 'not_controllable', error: err?.message || String(err) };
   }
@@ -406,7 +418,12 @@ async function applyNetworkProxy() {
   const baseline = stored[NETWORK_PROXY_BASELINE_KEY];
 
   try {
-    const current = await getCurrentProxy();
+    const current = await getCurrentProxy(false);
+    const incognitoAllowed = chrome.extension?.isAllowedIncognitoAccess
+      ? await chrome.extension.isAllowedIncognitoAccess().catch(() => false)
+      : false;
+    const currentIncognito = await getCurrentProxy(true);
+
 
     if (torSelected) {
       // Activate the network kill-switch before changing the proxy so the
@@ -416,9 +433,10 @@ async function applyNetworkProxy() {
       if (!baseline?.value) {
         await chrome.storage.local.set({
           [NETWORK_PROXY_BASELINE_KEY]: {
-            value: isOurTorProxy(current.value, settings.networkPrivacy.torPort)
-              ? { mode: 'system' }
-              : (current.value || { mode: 'system' }),
+            value: current.value || { mode: 'system' },
+            incognitoValue: currentIncognito.value || { mode: 'system' },
+            incognitoInherited: JSON.stringify(current.value || { mode: 'system' }) ===
+              JSON.stringify(currentIncognito.value || { mode: 'system' }),
             capturedAt: Date.now(),
           },
         });
@@ -429,8 +447,25 @@ async function applyNetworkProxy() {
         scope: 'regular',
       });
 
-      const applied = await getCurrentProxy();
-      if (isOurTorProxy(applied.value, settings.networkPrivacy.torPort)) {
+      let incognitoReady = true;
+      if (incognitoAllowed) {
+        try {
+          await chrome.proxy.settings.set({
+            value: torProxyConfig(settings.networkPrivacy.torPort),
+            scope: NETWORK_PROXY_INCOGNITO_SCOPE,
+          });
+        } catch (err) {
+          incognitoReady = false;
+          console.warn('[PrivacyShield] Incognito Tor proxy could not be set:', err?.message || err);
+        }
+      }
+      const applied = await getCurrentProxy(false);
+      const appliedIncognito = await getCurrentProxy(true);
+
+      if (
+        isOurTorProxy(applied.value, settings.networkPrivacy.torPort) &&
+        (!incognitoAllowed || (incognitoReady && isOurTorProxy(appliedIncognito.value, settings.networkPrivacy.torPort)))
+      ) {
         const verification = await verifyTorPath(settings.networkPrivacy.torPort);
         await persistTorVerification(verification);
 
@@ -452,7 +487,9 @@ async function applyNetworkProxy() {
         await chrome.storage.session.set({
           torVerification: {
             verified: false,
-            reason: 'proxy_configuration_rejected',
+            reason: incognitoAllowed && !incognitoReady
+              ? 'incognito_proxy_configuration_rejected'
+              : 'proxy_configuration_rejected',
             verifiedAt: Date.now(),
           },
           lastProxyError: {
@@ -469,12 +506,26 @@ async function applyNetworkProxy() {
     const ourTorActive =
       isOurTorProxy(current.value, 9050) ||
       isOurTorProxy(current.value, 9150);
+    const ourTorIncognitoActive =
+      isOurTorProxy(currentIncognito.value, 9050) ||
+      isOurTorProxy(currentIncognito.value, 9150);
 
     if (baseline?.value && ourTorActive) {
       await chrome.proxy.settings.set({
         value: baseline.value,
         scope: 'regular',
       });
+    }
+
+    if (baseline?.incognitoValue && incognitoAllowed && ourTorIncognitoActive) {
+      if (baseline.incognitoInherited) {
+        await chrome.proxy.settings.clear({ scope: NETWORK_PROXY_INCOGNITO_SCOPE });
+      } else {
+        await chrome.proxy.settings.set({
+          value: baseline.incognitoValue,
+          scope: NETWORK_PROXY_INCOGNITO_SCOPE,
+        });
+      }
     }
 
     if (baseline?.value) {
