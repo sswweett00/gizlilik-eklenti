@@ -249,7 +249,7 @@ const MAX_SESSION_RULES = 900; // DNR hard limit is 1000
 
 const RESOURCE_TYPES = [
   'main_frame', 'sub_frame', 'xmlhttprequest', 'script',
-  'stylesheet', 'image', 'font', 'object', 'media', 'ping', 'websocket', 'other',
+  'stylesheet', 'image', 'font', 'object', 'media', 'ping', 'websocket', 'webtransport', 'other',
 ];
 
 async function getTabStore() {
@@ -655,7 +655,7 @@ function settingsRequireReload(previous, next) {
   if (previous.enabled !== next.enabled) return true;
   if (JSON.stringify(previous.excludedDomains || []) !== JSON.stringify(next.excludedDomains || [])) return true;
 
-  const reloadModules = ['webrtc', 'canvas', 'webgl', 'audio', 'fonts', 'navigator', 'screen', 'permissions'];
+  const reloadModules = ['webrtc', 'canvas', 'webgl', 'audio', 'fonts', 'navigator', 'screen', 'permissions', 'network'];
   return reloadModules.some((key) => previous.modules?.[key] !== next.modules?.[key]);
 }
 
