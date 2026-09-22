@@ -15,7 +15,7 @@ Privacy Shield is a Manifest V3 privacy extension built around a hardened direct
 - `src/shared/storage.ts` — validated local-only settings storage
 - `src/popup/` — dashboard packaged through Vite
 - `src/options/` — validated import/export and legacy-exclusion cleanup
-- `public/rules/` — tracker, ad, network and URL-cleaning rules
+- `rules/` — header, permission-policy, tracker, ad, network and URL-cleaning rules
 - `tests/` — static regression and Vitest unit tests
 
 CRXJS supports Vite-bundled isolated and MAIN-world content scripts; MAIN-world files can use the `.iife.ts` convention so they are emitted as self-contained IIFEs.
@@ -40,7 +40,7 @@ The URL cleaner removes high-confidence tracking parameters such as utm_*, gclid
 
 ## Cross-browser target
 
-The manifest includes Firefox MV3 distribution metadata and the runtime uses WebExtensions APIs with feature checks where Chromium and Firefox differ. Firefox-specific signing metadata is included for MV3 distribution.
+The manifest includes Firefox MV3 distribution metadata. The hardening path is primarily validated against Chromium/Chrome MV3; Firefox API coverage is retained as a distribution target but should be runtime-tested independently before treating every browser-level control as equivalent.
 
 ## Build
 
@@ -55,3 +55,11 @@ The CI workflow runs the same validation sequence and verifies the generated dis
 ## Direct-connection limitation
 
 This project is deliberately not a proxy/VPN/Tor implementation. If the destination must not see the real public IP, the browser must use Tor, VPN, proxy or another intermediary network path. Privacy Shield is the browser-side hardening layer; AEGIS-9 / Qubes-Whonix remains the system-level anonymity companion.
+
+
+## Recent hardening in 4.7
+
+- Browser-enforced Permissions-Policy response rules complement the page-world permission shims for geolocation, camera, microphone and hardware/sensor interfaces. Chrome DNR supports response-header modification, and Permissions-Policy can deny these features with empty allowlists. citeturn549246search2turn549246search0
+- OffscreenCanvas 2D image reads/exports receive the same deterministic canvas-noise treatment as ordinary canvas paths.
+- Common OS preference media queries exposed via matchMedia() are standardized under the Navigator hardening module.
+- Tracker and ad blocklists were expanded without increasing the number of static blocking rules.
