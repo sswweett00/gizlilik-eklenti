@@ -774,7 +774,7 @@
 
     // Prevent persistent service-worker/push state from becoming a durable
     // cross-session identifier.
-    if (navigator.serviceWorker && ServiceWorkerContainer && ServiceWorkerContainer.prototype) {
+    if (navigator.serviceWorker && typeof ServiceWorkerContainer !== 'undefined' && ServiceWorkerContainer.prototype) {
       try {
         defProp(ServiceWorkerContainer.prototype, 'register', {
           value: markNative(function register() { return rejectAccess('Service Workers'); }, 'register'),
@@ -1430,7 +1430,22 @@
     if (!_bridgeToken || d.token !== _bridgeToken) return;
 
     try {
+      // window.postMessage is observable by the page. In maximum mode the
+      // page must never be able to use a learned bridge token to relax
+      // protections, so this world remains fail-closed.
       const s = d.settings || {};
+      if (_prefs.securityMode === 'maximum_direct' || s.securityMode === 'maximum_direct') {
+        _prefs.securityMode = 'maximum_direct';
+        _modules = { ...MODULE_DEFAULTS, enabled: true };
+        _prefs.geolocationMode = 'deny';
+        _prefs.timezone = 'auto';
+        _prefs.spoofedLocation = null;
+        _prefs.excludedDomains = [];
+        _prefs.networkPrivacy = { mode: 'direct_hardened' };
+        persistCfg();
+        return;
+      }
+
       if (typeof s.enabled === 'boolean') _modules.enabled = s.enabled;
       if (s.modules && typeof s.modules === 'object') Object.assign(_modules, s.modules);
       if (s.geolocationMode === 'deny' || s.geolocationMode === 'spoof' || s.geolocationMode === 'custom') {
@@ -1446,6 +1461,7 @@
       if (s.networkPrivacy && typeof s.networkPrivacy === 'object') {
         _prefs.networkPrivacy = { mode: 'direct_hardened' };
       }
+      _prefs.securityMode = typeof s.securityMode === 'string' ? s.securityMode : _prefs.securityMode;
       persistCfg();
     } catch (_) {}
   });
