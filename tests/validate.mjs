@@ -8,7 +8,7 @@ const trackerRules = JSON.parse(read('rules/trackers.json'));
 const networkRules = JSON.parse(read('rules/network.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.0.0');
+assert.equal(manifest.version, '4.1.0');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs']
@@ -111,6 +111,12 @@ assert.ok(new Set([...headerRules, ...trackerRules, ...networkRules].map((rule) 
 assert.ok(backgroundSource.includes("normalized.modules[key] = true"), 'maximum mode must lock all modules on');
 assert.ok(injectSource.includes("securityMode: 'maximum_direct'"), 'injector must default to maximum direct mode');
 assert.ok(injectSource.includes('crypto.getRandomValues'), 'identity seed must prefer Web Crypto entropy');
+assert.ok(injectSource.includes('const actualUA = String(navigator.userAgent || \'\');'), 'page identity must derive from native UA');
+assert.ok(!injectSource.includes('const fakeUAData ='), 'Client Hints must not be replaced with a cross-platform fake profile');
+assert.ok(backgroundSource.includes('function buildHeadersForProfile()'), 'header builder must exist');
+assert.ok(backgroundSource.includes('return [];'), 'per-tab header spoofing must be disabled to preserve first-request coherence');
+assert.ok(!backgroundSource.includes("{ header: 'User-Agent', operation: 'set'"), 'session rules must not rewrite User-Agent');
+assert.ok(!backgroundSource.includes("{ header: 'Accept-Language', operation: 'set'"), 'session rules must not rewrite Accept-Language');
 assert.ok(injectSource.includes("defProp(Navigator.prototype, 'gpu'"), 'WebGPU must be blocked in maximum direct mode');
 assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must disable DNS prefetch hints');
 assert.ok(backgroundSource.includes("type !== 'webtransport' && type !== 'ping'"), 'site exceptions must not bypass critical transport/privacy blocks');
