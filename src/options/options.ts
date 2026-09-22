@@ -68,10 +68,17 @@ function render(s:ExtensionSettings):void{
   masterSummary.textContent=s.enabled ? `${active} of ${keys.length} protection modules are enabled.` : 'Privacy Shield is disabled.';
   healthBadge.textContent=s.enabled ? 'Protection active' : 'Protection disabled';
   healthBadge.style.color=s.enabled?'var(--accent)':'var(--danger)';
+  const localTorLock=s.enabled&&s.networkPrivacy?.mode==='local_tor';
+  const forcedModules=new Set<keyof ExtensionModules>(['webrtc','network','permissions','geolocation','browserPrivacy']);
   modulesEl.querySelectorAll<HTMLInputElement>('input[data-module]').forEach((input)=>{
     const key=input.dataset.module as keyof ExtensionModules;
     input.checked=s.modules[key];
-    input.disabled=!s.enabled;
+    input.disabled=!s.enabled || (localTorLock && forcedModules.has(key));
+    if(input.disabled&&localTorLock&&forcedModules.has(key)){
+      input.title='Required while Local Tor is active';
+    }else{
+      input.removeAttribute('title');
+    }
   });
   const filter=search.value.trim().toLowerCase();
   modulesEl.querySelectorAll<HTMLElement>('.module').forEach((card)=>{
