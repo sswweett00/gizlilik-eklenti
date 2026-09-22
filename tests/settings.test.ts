@@ -43,6 +43,31 @@ describe('Privacy Shield settings', () => {
     expect(normalized.spoofedLocation.longitude).toBe(-180);
     expect(normalized.spoofedLocation.accuracy).toBe(1);
   });
+  it('forces critical leak protections in Local Tor mode', () => {
+    const normalized = normalizeSettings({
+      enabled: true,
+      modules: {
+        ...DEFAULT_SETTINGS.modules,
+        webrtc: false,
+        network: false,
+        permissions: false,
+        geolocation: false,
+        browserPrivacy: false,
+      },
+      networkPrivacy: { mode: 'local_tor', torPort: 9150 },
+      geolocationMode: 'custom',
+    });
+
+    expect(normalized.networkPrivacy.mode).toBe('local_tor');
+    expect(normalized.networkPrivacy.torPort).toBe(9150);
+    expect(normalized.modules.webrtc).toBe(true);
+    expect(normalized.modules.network).toBe(true);
+    expect(normalized.modules.permissions).toBe(true);
+    expect(normalized.modules.geolocation).toBe(true);
+    expect(normalized.modules.browserPrivacy).toBe(true);
+    expect(normalized.geolocationMode).toBe('deny');
+  });
+
 });
 
   it('preserves unrelated module values during partial storage saves', async () => {
