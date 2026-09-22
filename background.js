@@ -268,6 +268,8 @@ async function getNetworkPrivacyStatus() {
 
 const NETWORK_PROXY_BASELINE_KEY = 'networkProxyBaseline';
 const TOR_PROXY_HOST = '127.0.0.1';
+const TOR_KILL_SWITCH_RULE_ID = 19000;
+const TOR_KILL_SWITCH_PRIORITY = 20000;
 const VALID_TOR_PORTS = new Set([9050, 9150]);
 
 function torProxyConfig(port) {
@@ -307,6 +309,33 @@ async function getCurrentProxy() {
   }
 }
 
+async function setTorKillSwitch(enabled) {
+  try {
+    const current = await chrome.declarativeNetRequest.getDynamicRules();
+    const present = current.some((rule) => rule.id === TOR_KILL_SWITCH_RULE_ID);
+
+    if (enabled && !present) {
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: [],
+        addRules: [{
+          id: TOR_KILL_SWITCH_RULE_ID,
+          priority: TOR_KILL_SWITCH_PRIORITY,
+          action: { type: 'block' },
+          condition: {
+            regexFilter: '^https?://',
+          },
+        }],
+      });
+    } else if (!enabled && present) {
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: [TOR_KILL_SWITCH_RULE_ID],
+      });
+    }
+  } catch (err) {
+    console.error('[PrivacyShield] Tor kill-switch update failed:', err);
+  }
+}
+
 async function applyNetworkProxy() {
   if (!chrome.proxy?.settings) return;
 
@@ -319,60 +348,96 @@ async function applyNetworkProxy() {
     const current = await getCurrentProxy();
 
     if (torSelected) {
+      // Activate the network kill-switch before changing the proxy so the
+      // transition itself cannot create a direct-network window.
+      await setTorKillSwitch(true);
+
       if (!baseline?.value) {
         await chrome.storage.local.set({
           [NETWORK_PROXY_BASELINE_KEY]: {
-            value: current.value || { mode: 'system' },
+            value: isOurTorProxy(current.value, settings.networkPrivacy.torPort)
+              ? { mode: 'system' }
+              : (current.value || { mode: 'system' }),
             capturedAt: Date.now(),
           },
         });
       }
+
       await chrome.proxy.settings.set({
         value: torProxyConfig(settings.networkPrivacy.torPort),
         scope: 'regular',
       });
-      await chrome.storage.session.remove('lastProxyError');
+
+      const applied = await getCurrentProxy();
+      if (isOurTorProxy(applied.value, settings.networkPrivacy.torPort)) {
+        await setTorKillSwitch(false);
+        await chrome.storage.session.remove('lastProxyError');
+      } else {
+        await chrome.storage.session.set({
+          lastProxyError: {
+            message: 'Local Tor proxy was not accepted as the active Chrome proxy configuration.',
+            details: 'Kill-switch remains enabled.',
+            fatal: true,
+            at: Date.now(),
+          },
+        });
+      }
       return;
     }
 
-    const ourTorActive = isOurTorProxy(current.value, 9050) || isOurTorProxy(current.value, 9150);
+    const ourTorActive =
+      isOurTorProxy(current.value, 9050) ||
+      isOurTorProxy(current.value, 9150);
+
     if (baseline?.value && ourTorActive) {
       await chrome.proxy.settings.set({
         value: baseline.value,
         scope: 'regular',
       });
     }
+
     if (baseline?.value) {
       await chrome.storage.local.remove(NETWORK_PROXY_BASELINE_KEY);
     }
+
+    // Restore ordinary networking only after the Tor proxy is no longer active.
+    await setTorKillSwitch(false);
     await chrome.storage.session.remove('lastProxyError');
   } catch (err) {
     console.error('[PrivacyShield] Local Tor proxy apply/restore failed:', err);
+    if (torSelected) {
+      await setTorKillSwitch(true);
+    }
   }
 }
 
 if (chrome.proxy?.onProxyError) {
   chrome.proxy.onProxyError.addListener((details) => {
-    chrome.storage.session.set({
-      lastProxyError: {
-        message: String(details?.error || 'Proxy error'),
-        details: String(details?.details || ''),
-        fatal: details?.fatal === true,
-        at: Date.now(),
-      },
+    getSettings().then(async (settings) => {
+      await chrome.storage.session.set({
+        lastProxyError: {
+          message: String(details?.error || 'Proxy error'),
+          details: String(details?.details || ''),
+          fatal: details?.fatal === true,
+          at: Date.now(),
+        },
+      });
+      if (settings.enabled && settings.networkPrivacy?.mode === 'local_tor') {
+        await setTorKillSwitch(true);
+      }
     }).catch(() => {});
   });
 }
 
 if (chrome.proxy?.settings?.onChange) {
   chrome.proxy.settings.onChange.addListener(() => {
-    getSettings().then((settings) => {
-      if (settings.enabled && settings.networkPrivacy?.mode === 'local_tor') {
-        applyNetworkProxy().catch((err) =>
-          console.error('[PrivacyShield] Tor proxy re-apply failed:', err)
-        );
+    getSettings().then(async (settings) => {
+      if (!settings.enabled || settings.networkPrivacy?.mode !== 'local_tor') return;
+      const current = await getCurrentProxy();
+      if (!isOurTorProxy(current.value, settings.networkPrivacy.torPort)) {
+        await applyNetworkProxy();
       }
-    }).catch(() => {});
+    }).catch((err) => console.error('[PrivacyShield] Tor proxy state sync failed:', err));
   });
 }
 
