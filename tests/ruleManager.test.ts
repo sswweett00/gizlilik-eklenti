@@ -5,6 +5,7 @@ describe('rule manager invariants', () => {
   it('declares all supported static rulesets', () => {
     expect(STATIC_RULESET_IDS).toEqual([
       'header_rules',
+      'permission_rules',
       'tracker_rules',
       'ad_rules',
       'network_rules',
@@ -16,13 +17,15 @@ describe('rule manager invariants', () => {
   it('maps individual module toggles to rulesets', () => {
     expect(getWantedRulesetIds(true, {
       headers: true,
+      permissions: true,
       trackers: false,
       ads: false,
       network: true,
       urlCleaner: false,
-    })).toEqual(['header_rules', 'network_rules']);
+    })).toEqual(['header_rules', 'permission_rules', 'network_rules']);
     expect(getWantedRulesetIds(false, {
       headers: true,
+      permissions: true,
       trackers: true,
       ads: true,
       network: true,
