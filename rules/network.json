@@ -22,5 +22,17 @@
         "ping"
       ]
     }
+  },
+  {
+    "id": 302,
+    "priority": 90,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "resourceTypes": [
+        "websocket"
+      ]
+    }
   }
 ]
