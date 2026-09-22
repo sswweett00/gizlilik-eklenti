@@ -84,11 +84,15 @@ function renderUI(settings) {
   updateGlobalStatusIndicator(settings.enabled);
   document.body.classList.toggle('shield-disabled', !settings.enabled);
 
-  // Module toggles
+  // Maximum direct mode keeps all privacy modules enabled and non-negotiable.
+  const maximumMode = settings.securityMode === 'maximum_direct';
   moduleToggles.forEach((toggle) => {
     const key = toggle.dataset.key;
     const enabled = settings.modules[key] !== false;
     toggle.checked = enabled;
+    toggle.disabled = maximumMode;
+    toggle.setAttribute('aria-disabled', maximumMode ? 'true' : 'false');
+    toggle.closest('.module-card')?.classList.toggle('module-locked', maximumMode);
     updateModuleCardState(toggle.closest('.module-card'), enabled);
   });
 
@@ -98,8 +102,9 @@ function renderUI(settings) {
   timezoneSelect.value = settings.timezone || 'auto';
 
   // Geolocation mode
-  geoModeSelect.value = settings.geolocationMode || 'spoof';
-  toggleSpoofLocationSection(settings.geolocationMode === 'custom');
+  geoModeSelect.value = settings.geolocationMode || 'deny';
+  geoModeSelect.disabled = maximumMode;
+  toggleSpoofLocationSection(settings.geolocationMode === 'custom' && !maximumMode);
 
   // Coordinates
   if (settings.spoofedLocation) {
