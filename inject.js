@@ -1463,44 +1463,46 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION 8: SETTINGS SYNC FROM BACKGROUND (via bridge.js postMessage)
+  // SECTION 8: SETTINGS SYNC FROM BACKGROUND (authenticated bridge messages)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  let _bridgeToken = null;
+  let _settingsVerifyKey = null;
+  let _lastSettingsSequence = 0;
 
   function persistCfg() {
     // Intentionally no-op. Security state must never be persisted in page-owned storage.
   }
 
-  window.addEventListener('message', function onSettingsMessage(event) {
-    if (event.source !== window) return;
-    const d = event.data;
-    if (!d) return;
-
-    if (d.__privacyShieldType === 'PS_TOKEN') {
-      if (typeof d.token === 'string' && d.token && !_bridgeToken) {
-        _bridgeToken = d.token;
-        try {
-          window.postMessage({ __privacyShield: true, type: 'REQUEST_SETTINGS' }, '*');
-        } catch (_) {}
-      }
-      return;
-    }
-
-    if (d.__privacyShieldType === 'ROTATE_IDENTITY') {
-      if (_bridgeToken && d.token === _bridgeToken) {
-        // Profiles are document-local and no longer stored in page storage.
-      }
-      return;
-    }
-
-    if (d.__privacyShieldType !== 'SETTINGS_UPDATE') return;
-    // Require the bridge-minted token: blocks accidental/naive forgery by
-    // page scripts (see bridge.js header for the residual-risk note).
-    if (!_bridgeToken || d.token !== _bridgeToken) return;
-
+  function base64ToBytes(value) {
+    if (typeof value !== 'string' || !value) return null;
     try {
-      const s = d.settings || {};
+      const raw = atob(value);
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+      return bytes;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function importVerifyKey(publicKeyJwk) {
+    if (_settingsVerifyKey || !publicKeyJwk || typeof publicKeyJwk !== 'object') return;
+    try {
+      _settingsVerifyKey = await crypto.subtle.importKey(
+        'jwk',
+        publicKeyJwk,
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        false,
+        ['verify']
+      );
+    } catch (_) {
+      _settingsVerifyKey = null;
+    }
+  }
+
+  function applyAuthenticatedSettings(s) {
+    try {
+      if (!s || typeof s !== 'object') return;
 
       if (typeof s.enabled === 'boolean') _modules.enabled = s.enabled;
       if (s.modules && typeof s.modules === 'object') Object.assign(_modules, s.modules);
@@ -1512,7 +1514,10 @@
         _prefs.spoofedLocation = s.spoofedLocation;
       }
       if (Array.isArray(s.excludedDomains)) {
-        _prefs.excludedDomains = s.excludedDomains.filter(function (domain) { return typeof domain === 'string'; }).map(function (domain) { return domain.toLowerCase(); }).slice(0, 100);
+        _prefs.excludedDomains = s.excludedDomains
+          .filter(function (domain) { return typeof domain === 'string'; })
+          .map(function (domain) { return domain.toLowerCase(); })
+          .slice(0, 100);
       }
       if (s.networkPrivacy && typeof s.networkPrivacy === 'object') {
         _prefs.networkPrivacy = { mode: 'direct_hardened' };
@@ -1520,6 +1525,50 @@
       _prefs.securityMode = typeof s.securityMode === 'string' ? s.securityMode : _prefs.securityMode;
       persistCfg();
     } catch (_) {}
+  }
+
+  async function verifyAndApplySettings(message) {
+    if (!_settingsVerifyKey) return;
+    if (!Number.isSafeInteger(message.sequence) || message.sequence <= _lastSettingsSequence) return;
+    if (typeof message.payload !== 'string' || !message.payload) return;
+
+    const signatureBytes = base64ToBytes(message.signature);
+    if (!signatureBytes) return;
+
+    try {
+      const payload = JSON.parse(message.payload);
+      if (!payload || payload.sequence !== message.sequence || !payload.settings) return;
+      const valid = await crypto.subtle.verify(
+        { name: 'ECDSA', hash: 'SHA-256' },
+        _settingsVerifyKey,
+        signatureBytes,
+        new TextEncoder().encode(message.payload)
+      );
+      if (!valid || message.sequence <= _lastSettingsSequence) return;
+      _lastSettingsSequence = message.sequence;
+      applyAuthenticatedSettings(payload.settings);
+    } catch (_) {}
+  }
+
+  window.addEventListener('message', function onSettingsMessage(event) {
+    if (event.source !== window) return;
+    const d = event.data;
+    if (!d) return;
+
+    if (d.__privacyShieldType === 'SETTINGS_VERIFY_KEY') {
+      void importVerifyKey(d.publicKeyJwk);
+      return;
+    }
+
+    if (d.__privacyShieldType === 'ROTATE_IDENTITY') {
+      // Rotation is intentionally document-local and never trusts page data.
+      return;
+    }
+
+    if (d.__privacyShieldType === 'SETTINGS_UPDATE') {
+      void verifyAndApplySettings(d);
+    }
   });
+
 
 })();
