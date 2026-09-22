@@ -38,7 +38,8 @@ for (const [name, rules] of [['header', headerRules], ['tracker', trackerRules],
 
 const headerSource = read('rules/rules.json');
 assert.ok(!/header":\s*"User-Agent"/.test(headerSource), 'static rules must not hard-code a global User-Agent');
-assert.ok(!/header":\s*"Accept-Language"/.test(headerSource), 'static rules must not hard-code Accept-Language');
+assert.ok(/header":\s*"Accept-Language"/.test(headerSource), 'locale policy must explicitly standardize Accept-Language');
+assert.ok(headerSource.includes('en-US,en;q=0.9'), 'Accept-Language must use the standardized locale profile');
 
 const background = read('background.js');
 for (const marker of [
@@ -132,6 +133,9 @@ assert.ok(injectSource.includes('Storage Access API'), 'Storage Access API must 
 assert.ok(injectSource.includes('Service Workers'), 'service-worker registration must be blocked');
 assert.ok(injectSource.includes('Push subscription'), 'push subscriptions must be blocked');
 assert.ok(injectSource.includes('const actualUA = String(navigator.userAgent || \'\');'), 'page identity must derive from native UA');
+assert.ok(injectSource.includes("lang: 'en-US'"), 'maximum mode must standardize page locale');
+assert.ok(injectSource.includes("langs: ['en-US', 'en']"), 'maximum mode must standardize navigator languages');
+assert.ok(injectSource.includes('DEFAULT_INTL_LOCALE_CONSTRUCTORS'), 'Intl locale fingerprint surfaces must be standardized');
 assert.ok(!injectSource.includes('const fakeUAData ='), 'Client Hints must not be replaced with a cross-platform fake profile');
 assert.ok(!backgroundSource.includes("{ header: 'User-Agent', operation: 'set'"), 'session rules must not rewrite User-Agent');
 assert.ok(!backgroundSource.includes("{ header: 'Accept-Language', operation: 'set'"), 'session rules must not rewrite Accept-Language');
