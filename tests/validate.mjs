@@ -129,6 +129,7 @@ assert.ok(injectSource.includes("defProp(Navigator.prototype, 'gpu'"), 'WebGPU m
 assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must disable DNS prefetch hints');
 assert.ok(backgroundSource.includes("type !== 'webtransport' && type !== 'ping'"), 'site exceptions must not bypass critical transport/privacy blocks');
 assert.ok(popupSource.includes('Maximum direct mode'), 'popup must expose the maximum direct security posture');
+assert.ok(popupSource.includes('AEGIS-9'), 'popup must expose the AEGIS-9 system anonymity profile');
 
 for (const path of [
   'docs/ZERO_COST_DEPLOYMENT.md',
