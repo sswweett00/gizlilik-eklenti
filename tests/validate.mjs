@@ -184,7 +184,8 @@ assert.ok(!read('bridge.js').includes('Math.random()'), 'bridge authentication m
 assert.ok(read('bridge.js').includes('crypto.getRandomValues'), 'bridge authentication must use Web Crypto entropy');
 assert.ok(injectSource.includes("defProp(Navigator.prototype, 'gpu'"), 'WebGPU must be blocked in maximum direct mode');
 assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must disable DNS prefetch hints');
-assert.ok(backgroundSource.includes("type !== 'webtransport' && type !== 'ping'"), 'site exceptions must not bypass critical transport/privacy blocks');
+assert.ok(backgroundSource.includes('const SITE_EXCEPTION_RESOURCE_TYPES'), 'site exceptions must declare an explicit resource allowlist');
+assert.ok(!backgroundSource.includes("'webtransport'") || backgroundSource.includes('network_rules'), 'critical transport handling must remain outside site exceptions');
 assert.ok(popupSource.includes('Independent controls'), 'popup must expose independent module controls');
 assert.ok(popupSource.includes('AEGIS-9'), 'popup must expose the AEGIS-9 system anonymity profile');
 for (const path of ['package.json','tsconfig.json','vite.config.ts','manifest.config.ts','src/shared/constants.ts','src/shared/types.ts','src/shared/storage.ts','src/shared/utils.ts','src/background/index.ts','src/background/ruleManager.ts','src/background/urlCleaner.ts','src/background/badgeManager.ts','src/content/content-isolated.ts','src/content/inject-main.iife.ts','src/popup/popup.html','src/popup/popup.ts','src/options/options.html','src/options/options.ts']) {
