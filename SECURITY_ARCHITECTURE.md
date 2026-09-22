@@ -1,8 +1,8 @@
-# Privacy Shield 4.0 — Security Architecture
+# Privacy Shield 4.3 — Security Architecture
 
 ## Executive Summary
 
-Privacy Shield 4.0 is a Chromium privacy-hardening extension plus a zero-cost system deployment model for direct network connections. It does not configure or depend on a proxy, VPN, or Tor.
+Privacy Shield 4.3 is a Chromium privacy-hardening extension plus an AEGIS-9 zero-cost system deployment model for direct network connections. It does not configure or depend on a proxy, VPN, or Tor.
 
 The system deliberately does not claim to hide the public source IP of a normal direct TCP/QUIC connection. A destination server necessarily receives the network source address of the connection that reaches it. Network-layer anonymity therefore remains outside the capability of a browser extension without an intermediary network path.
 
@@ -70,11 +70,11 @@ Per-tab profiles correlate browser version, platform, GPU family, screen size an
 
 Static global User-Agent spoofing is avoided. Per-tab session rules are installed after profile registration so JavaScript and later network requests can advertise a consistent identity.
 
-The first navigation request is a documented limitation because a document_start script cannot retroactively modify the request that was sent before the script executed.
+The first navigation request is intentionally left native. The project no longer attempts to rewrite it because a document_start script cannot retroactively modify that request, and cross-platform spoofing can create a detectable split identity.
 
 ### Identity entropy
 
-Per-tab profile generation prefers `crypto.getRandomValues()` at `document_start`. The extension does not claim this changes the network source IP; it only strengthens unpredictable browser-side identity material.
+Per-tab profile bookkeeping prefers `crypto.getRandomValues()` at `document_start`. The network/browser identity itself remains native and coherent; randomness is used for deterministic privacy-noise seeds, not for cross-platform User-Agent spoofing.
 
 ### State and trust boundaries
 
@@ -145,3 +145,8 @@ Recommended runtime validation matrix: Chrome stable/Beta/Chromium on Windows, L
 Privacy Shield 3.0 should be treated as a production-oriented direct-connection privacy hardener, not as an anonymous networking system.
 
 The correct security property is: maximum browser-side privacy, explicit residual-risk disclosure, strong local leak resistance, coherent tab identities, and no false promise that a browser extension can hide the public IP of a direct network connection without changing the network path.
+
+
+## AEGIS-9 system profile
+
+For website-visible IP anonymity, Privacy Shield is paired with Qubes-Whonix/Tor rather than trying to emulate a Tor network in a browser extension. The current documented target is Qubes R4.3 + Whonix 18, using `anon-whonix -> sys-whonix -> Tor` and `whonix-workstation-18-dvm` for disposable sessions. citeturn303752search2turn602539search0turn602539search1
