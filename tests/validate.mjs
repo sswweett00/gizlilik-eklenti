@@ -41,6 +41,9 @@ for (const [name, rules] of [['header', headerRules], ['tracker', trackerRules],
 const headerSource = read('rules/rules.json');
 assert.ok(!/header":\s*"User-Agent"/.test(headerSource), 'static rules must not hard-code a global User-Agent');
 assert.ok(/header":\s*"Accept-Language"/.test(headerSource), 'locale policy must explicitly standardize Accept-Language');
+assert.ok(headerRules[0].action.requestHeaders.some((h) => h.header === 'DNT' && h.operation === 'set' && h.value === '1'), 'DNT must be explicitly enabled');
+assert.ok(headerRules[0].action.requestHeaders.some((h) => h.header === 'Sec-GPC' && h.operation === 'set' && h.value === '1'), 'GPC must be explicitly enabled');
+assert.ok(headerRules[0].action.requestHeaders.some((h) => h.header === 'Referer' && h.operation === 'remove'), 'Referer must be removed');
 assert.ok(headerSource.includes('en-US,en;q=0.9'), 'Accept-Language must use the standardized locale profile');
 
 const background = read('background.js');
