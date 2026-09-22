@@ -17,6 +17,8 @@ describe('URL cleaner rules', () => {
     );
     expect(allRemoved).toBe(true);
 
-    expect(rules.every((rule) => rule.condition?.resourceTypes).toEqual(['main_frame', 'sub_frame']));
+    expect(rules.every((rule) => (
+      JSON.stringify(rule.condition?.resourceTypes) === JSON.stringify(['main_frame', 'sub_frame'])
+    ))).toBe(true);
   });
 });
