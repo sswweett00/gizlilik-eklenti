@@ -260,12 +260,12 @@
       : uaMajor + '.0.0.0';
     const actualUAMobile = actualUAData ? actualUAData.mobile === true : /Mobile/i.test(actualUA);
 
+    // Locale is standardized to a common profile in maximum mode so
+    // Turkish/system locale settings cannot become a location side channel.
     const locEntry = {
       timezone: 'UTC',
-      lang: String(navigator.language || 'en-US'),
-      langs: Array.isArray(navigator.languages) && navigator.languages.length
-        ? [...navigator.languages].slice(0, 4)
-        : [String(navigator.language || 'en-US'), 'en'],
+      lang: 'en-US',
+      langs: ['en-US', 'en'],
       lat: 0,
       lng: 0,
       city: 'Hidden',
@@ -1342,6 +1342,32 @@
     );
     markNative(PatchedDTF, 'DateTimeFormat');
     Intl.DateTimeFormat = PatchedDTF;
+    // Normalize other Intl constructors too. Otherwise NumberFormat,
+    // Collator, PluralRules, etc. can expose the real system locale even though
+    // navigator.language and Accept-Language are standardized.
+    const DEFAULT_INTL_LOCALE_CONSTRUCTORS = [
+      'NumberFormat', 'Collator', 'PluralRules', 'RelativeTimeFormat',
+      'ListFormat', 'DisplayNames', 'Segmenter', 'DurationFormat',
+    ];
+    for (const name of DEFAULT_INTL_LOCALE_CONSTRUCTORS) {
+      const Original = Intl[name];
+      if (typeof Original !== 'function') continue;
+      try {
+        const Wrapped = function (locales, options) {
+          const normalizedLocales = locales === undefined ? 'en-US' : locales;
+          return new Original(normalizedLocales, options);
+        };
+        Wrapped.prototype = Original.prototype;
+        if (typeof Original.supportedLocalesOf === 'function') {
+          Wrapped.supportedLocalesOf = markNative(
+            Original.supportedLocalesOf.bind(Original), 'supportedLocalesOf'
+          );
+        }
+        markNative(Wrapped, name);
+        Intl[name] = Wrapped;
+      } catch (_) {}
+    }
+
     // No resolvedOptions() patch needed: instances created without an
     // explicit timeZone already got currentTZ() injected by the constructor,
     // so the real resolved zone IS the spoofed one. Instances with an
