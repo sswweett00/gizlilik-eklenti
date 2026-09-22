@@ -80,11 +80,7 @@ function renderUI(settings) {
   // Master toggle
   masterToggle.checked = settings.enabled;
 
-  const ip = settings.ipProtection || {};
-  if (ipProtectionMode) ipProtectionMode.value = ip.mode || 'proxy_required';
-  if (proxyScheme) proxyScheme.value = ip.scheme || 'socks5';
-  if (proxyHost) proxyHost.value = ip.host || '';
-  if (proxyPort) proxyPort.value = ip.port || 1080;
+  // Network privacy mode is fixed to direct-hardened; there are no proxy controls.
   updateGlobalStatusIndicator(settings.enabled);
   document.body.classList.toggle('shield-disabled', !settings.enabled);
 
@@ -118,7 +114,7 @@ const GEO_MODE_LABELS = {
   custom: 'Custom coordinates',
 };
 
-function renderIpProtectionStatus(status) {
+function renderNetworkPrivacyStatus(status) {
   const mode = status?.networkPrivacy;
   if (!mode) return;
 
@@ -153,7 +149,7 @@ function renderStatus(status) {
     renderSiteInfo({ tab: { id: status.activeTab.id, url: '', host: status.activeTab.host }, excluded: status.activeTab.excluded });
   }
 
-  renderIpProtectionStatus(status);
+  renderNetworkPrivacyStatus(status);
 }
 
 function renderErrorState() {
