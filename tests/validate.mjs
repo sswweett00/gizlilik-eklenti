@@ -181,7 +181,10 @@ assert.ok(!backgroundSource.includes("{ header: 'Accept-Language', operation: 's
 assert.ok(!backgroundSource.includes('SESSION_RULE_ID_BASE'), 'legacy session header engine must be removed');
 assert.ok(!backgroundSource.includes('buildHeadersForProfile'), 'legacy per-tab header builder must be removed');
 assert.ok(!read('bridge.js').includes('Math.random()'), 'bridge authentication must not use Math.random entropy');
-assert.ok(read('bridge.js').includes('crypto.getRandomValues'), 'bridge authentication must use Web Crypto entropy');
+assert.ok(read('bridge.js').includes("crypto.subtle.generateKey"), 'bridge must generate an isolated-world signing key');
+assert.ok(read('bridge.js').includes("crypto.subtle.sign"), 'bridge must sign settings updates');
+assert.ok(read('inject.js').includes("crypto.subtle.verify"), 'injector must verify settings signatures');
+assert.ok(read('inject.js').includes('SETTINGS_VERIFY_KEY'), 'injector must accept only a public verification key');
 assert.ok(injectSource.includes("defProp(Navigator.prototype, 'gpu'"), 'WebGPU must be blocked in maximum direct mode');
 assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must disable DNS prefetch hints');
 assert.ok(backgroundSource.includes('const SITE_EXCEPTION_RESOURCE_TYPES'), 'site exceptions must declare an explicit resource allowlist');
