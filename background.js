@@ -770,6 +770,14 @@ async function buildStatus() {
 
 // ─── Storage Change Listener ──────────────────────────────────────────────────
 
+let sessionRuleRebuildQueue = Promise.resolve();
+
+function enqueue(task) {
+  const run = sessionRuleRebuildQueue.then(task, task);
+  sessionRuleRebuildQueue = run.catch(() => {});
+  return run;
+}
+
 async function onSettingsChanged(previousSettings, nextSettings) {
   const settings = nextSettings || await getSettings();
   await applyPrivacySettings();
