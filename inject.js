@@ -284,7 +284,6 @@
     });
     const hwEntry = pick(compatibleHardware.length ? compatibleHardware : POOL.hardware);
 
-    const actualPlatform = String(navigator.platform || '');
     const compatibleGL = POOL.webgl.filter(function (gpu) {
       if (/^Mac/i.test(actualPlatform)) return gpu.vendor.includes('Apple') || gpu.vendor.includes('Intel');
       if (/Win/i.test(actualPlatform)) return !gpu.vendor.includes('Apple');
