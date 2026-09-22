@@ -29,10 +29,19 @@ done
 echo
 echo "[Current network path]"
 qvm-prefs anon-whonix netvm || true
+echo "[Current default disposable]"
+qvm-prefs anon-whonix default_dispvm || true
 
 echo
 echo "[Recommended policy]"
 echo "anon-whonix netvm -> sys-whonix"
+echo "anon-whonix default_dispvm -> whonix-workstation-18-dvm"
+
+if ! qvm-check whonix-workstation-18-dvm >/dev/null 2>&1; then
+  echo "WARNING: whonix-workstation-18-dvm is missing."
+  echo "Install/configure Qubes-Whonix first."
+  if (( APPLY == 1 )); then exit 3; fi
+fi
 
 if (( APPLY == 0 )); then
   echo
@@ -44,10 +53,12 @@ fi
 echo
 echo "Applying anonymous network path..."
 qvm-prefs anon-whonix netvm sys-whonix
+qvm-prefs anon-whonix default_dispvm whonix-workstation-18-dvm
 
 echo
 echo "Result:"
 qvm-prefs anon-whonix netvm
+qvm-prefs anon-whonix default_dispvm
 
 echo
 echo "IMPORTANT:"
