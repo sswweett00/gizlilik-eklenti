@@ -1,4 +1,4 @@
-# Privacy Shield 3.0 — Security Architecture
+# Privacy Shield 3.1 — Security Architecture
 
 ## Executive Summary
 
@@ -6,7 +6,7 @@ Privacy Shield 3.0 is a self-contained Chromium privacy-hardening extension for 
 
 The system deliberately does not claim to hide the public source IP of a normal direct TCP/QUIC connection. A destination server necessarily receives the network source address of the connection that reaches it. Network-layer anonymity therefore remains outside the capability of a browser extension without an intermediary network path.
 
-The achievable security goal is: reduce browser-side fingerprinting, block major alternate browser transport surfaces, minimize tracking/telemetry APIs, keep JavaScript and request identities coherent, validate all settings, and report residual risk honestly.
+The achievable security goal is: reduce browser-side fingerprinting, block major alternate browser transport surfaces, minimize tracking/telemetry APIs, keep JavaScript and request identities coherent, enforce a maximum direct-privacy baseline, validate all settings, and report residual risk honestly.
 
 ## Architecture
 
@@ -49,13 +49,17 @@ The extension hardens WebRTC IP handling, network prediction, hyperlink auditing
 
 Controlled settings are snapshotted in session storage and restored when protection is disabled during the active extension session.
 
+### Maximum direct mode
+
+The default `maximum_direct` posture forces all browser privacy modules on while the extension master switch is enabled. Geolocation is deny-by-default. Site exceptions do not disable page-world protections in maximum mode, and their DNR allow rules deliberately do not bypass the WebTransport or ping/beacon blocks. Chrome's WebRTC IP handling policy is also set to disable non-proxied UDP. Media-device enumeration is minimized.
+
 ### WebRTC
 
-RTCPeerConnection is blocked in the page world while protection is active. Chrome's WebRTC IP handling policy is also set to disable non-proxied UDP. Media-device enumeration is minimized.
+RTCPeerConnection is blocked in the page world while protection is active. Chrome's WebRTC IP policy is also forced to `disable_non_proxied_udp`.
 
-### WebTransport
+### WebTransport and telemetry
 
-WebTransport is blocked twice: at the page API boundary and with a DNR rule matching the webtransport resource type.
+WebTransport is blocked at the page API boundary and with a DNR rule. HTTP ping/beacon requests are also blocked in the hardened network ruleset to reduce silent telemetry channels.
 
 ### Fingerprint coherence
 
@@ -66,6 +70,10 @@ Per-tab profiles correlate browser version, platform, GPU family, screen size an
 Static global User-Agent spoofing is avoided. Per-tab session rules are installed after profile registration so JavaScript and later network requests can advertise a consistent identity.
 
 The first navigation request is a documented limitation because a document_start script cannot retroactively modify the request that was sent before the script executed.
+
+### Identity entropy
+
+Per-tab profile generation prefers `crypto.getRandomValues()` at `document_start`. The extension does not claim this changes the network source IP; it only strengthens unpredictable browser-side identity material.
 
 ### State and trust boundaries
 
