@@ -47,12 +47,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -68,12 +76,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -89,12 +105,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -110,12 +134,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -131,12 +163,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -152,12 +192,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -173,12 +221,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -194,12 +250,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -215,12 +279,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -236,12 +308,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -257,13 +337,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -279,13 +366,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -301,13 +395,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -323,13 +424,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -345,13 +453,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -367,13 +482,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -389,13 +511,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -411,13 +540,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -433,13 +569,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -455,13 +598,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -477,13 +627,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -499,13 +656,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -521,13 +685,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -543,13 +714,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -565,13 +743,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -587,13 +772,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -609,13 +801,20 @@
       ],
       "resourceTypes": [
         "main_frame",
-        "xmlhttprequest",
-        "script",
         "sub_frame",
+        "stylesheet",
+        "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -630,12 +829,19 @@
       "resourceTypes": [
         "main_frame",
         "sub_frame",
-        "xmlhttprequest",
+        "stylesheet",
         "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -650,12 +856,19 @@
       "resourceTypes": [
         "main_frame",
         "sub_frame",
-        "xmlhttprequest",
+        "stylesheet",
         "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -670,12 +883,19 @@
       "resourceTypes": [
         "main_frame",
         "sub_frame",
-        "xmlhttprequest",
+        "stylesheet",
         "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -690,12 +910,19 @@
       "resourceTypes": [
         "main_frame",
         "sub_frame",
-        "xmlhttprequest",
+        "stylesheet",
         "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   },
@@ -721,12 +948,19 @@
       "resourceTypes": [
         "main_frame",
         "sub_frame",
-        "xmlhttprequest",
+        "stylesheet",
         "script",
         "image",
+        "font",
+        "object",
+        "xmlhttprequest",
         "ping",
-        "other",
-        "webtransport"
+        "csp_report",
+        "media",
+        "websocket",
+        "webtransport",
+        "webbundle",
+        "other"
       ]
     }
   }
