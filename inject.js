@@ -233,25 +233,43 @@
       return arr[Math.floor(rng() * arr.length)];
     }
 
+    // Keep network identity coherent with the actual Chromium build.
+    // Cross-platform/random UA spoofing creates a detectable mismatch because
+    // the first navigation request and Chromium Client Hints are emitted
+    // before this page-world script can register a per-tab profile.
     const actualUA = String(navigator.userAgent || '');
-    const uaMajor = (actualUA.match(/(?:Chrome|Edg|Firefox)\/(\d+)/) || [null, '128'])[1];
-    const uaCandidates = POOL.userAgents.filter(function (entry) { return !entry.ua.includes('Safari/605.1.15'); });
-    const rawUaEntry = pick(uaCandidates.length ? uaCandidates : POOL.userAgents);
-    const normalizedUa = rawUaEntry.ua.replace(/(Chrome|Edg)\/\d+(?:\.\d+){0,3}/g, function (_, family) {
-      return family + '/' + uaMajor + '.0.0.0';
-    });
-    const normalizedBrands = rawUaEntry.brands.map(function (brand) {
-      return { brand: brand.brand, version: brand.brand === 'Not-A.Brand' ? '99' : uaMajor };
-    });
-    const uaEntry = {
-      ...rawUaEntry,
-      ua: normalizedUa,
-      brands: normalizedBrands,
-      uaFullVersion: uaMajor + '.0.0.0',
-      uaPlatformVersion: rawUaEntry.uaPlatform === 'Windows' ? '10.0.0' : rawUaEntry.uaPlatform === 'macOS' ? '10.15.7' : '',
-    };
+    const actualAppVersion = String(navigator.appVersion || actualUA.replace(/^Mozilla\\//, ''));
+    const actualPlatform = String(navigator.platform || '');
+    const actualVendor = String(navigator.vendor || '');
+    const actualVendorSub = String(navigator.vendorSub || '');
+    const actualProduct = String(navigator.product || 'Gecko');
+    const actualProductSub = String(navigator.productSub || '');
+    const actualUAData = navigator.userAgentData;
+    const uaMajor = (actualUA.match(/(?:Chrome|Chromium|Edg|Firefox)\\/(\\d+)/) || [null, '0'])[1];
+    const actualBrands = actualUAData && Array.isArray(actualUAData.brands)
+      ? actualUAData.brands.map((b) => ({ brand: String(b.brand), version: String(b.version) }))
+      : [];
+    const actualUAPlatform = actualUAData && typeof actualUAData.platform === 'string'
+      ? actualUAData.platform
+      : (/Win/i.test(actualPlatform) ? 'Windows' : /Mac/i.test(actualPlatform) ? 'macOS' : 'Linux');
+    const actualUAPlatformVersion = actualUAData && typeof actualUAData.platformVersion === 'string'
+      ? actualUAData.platformVersion
+      : '';
+    const actualUAFullVersion = actualUAData && typeof actualUAData.fullVersion === 'string'
+      ? actualUAData.fullVersion
+      : uaMajor + '.0.0.0';
+    const actualUAMobile = actualUAData ? actualUAData.mobile === true : /Mobile/i.test(actualUA);
 
-    const locEntry = pick(POOL.locales);
+    const locEntry = {
+      timezone: 'UTC',
+      lang: String(navigator.language || 'en-US'),
+      langs: Array.isArray(navigator.languages) && navigator.languages.length
+        ? [...navigator.languages].slice(0, 4)
+        : [String(navigator.language || 'en-US'), 'en'],
+      lat: 0,
+      lng: 0,
+      city: 'Hidden',
+    };
     const currentInnerW = Math.max(320, Number(window.innerWidth) || 1280);
     const currentInnerH = Math.max(240, Number(window.innerHeight) || 720);
     const compatibleScreens = POOL.screens.filter(function (screen) {
@@ -280,28 +298,29 @@
 
     const profile = {
       seed,
-      // User Agent
-      ua: uaEntry.ua,
-      appVersion: uaEntry.ua.replace(/^Mozilla\//, ''),
-      platform: uaEntry.platform,
-      vendor: uaEntry.vendor,
-      vendorSub: '',
-      product: 'Gecko',
-      productSub: uaEntry.productSub,
-      uaBrands: uaEntry.brands,
-      uaPlatform: uaEntry.uaPlatform,
-      uaPlatformVersion: uaEntry.uaPlatformVersion,
-      uaFullVersion: uaEntry.uaFullVersion,
-      uaMobile: false,
-      // Locale
+      // Network/browser identity is kept native and coherent.
+      ua: actualUA,
+      appVersion: actualAppVersion,
+      platform: actualPlatform,
+      vendor: actualVendor,
+      vendorSub: actualVendorSub,
+      product: actualProduct,
+      productSub: actualProductSub,
+      uaBrands: actualBrands,
+      uaPlatform: actualUAPlatform,
+      uaPlatformVersion: actualUAPlatformVersion,
+      uaFullVersion: actualUAFullVersion,
+      uaMobile: actualUAMobile,
+      // Locale/timezone: language remains internally coherent; timezone is
+      // standardized in maximum mode instead of exposing the local timezone.
       language: locEntry.lang,
       languages: Object.freeze([...locEntry.langs]),
-      timezone: locEntry.timezone,
-      city: locEntry.city,
-      // Geolocation
-      lat: locEntry.lat + latJitter,
-      lng: locEntry.lng + lngJitter,
-      geoAccuracy: 10 + Math.round(rng2() * 25),
+      timezone: 'UTC',
+      city: 'Hidden',
+      // Geolocation is deny-by-default in maximum mode.
+      lat: 0,
+      lng: 0,
+      geoAccuracy: 10000,
       // Screen
       screenW: screenEntry.w,
       screenH: screenEntry.h,
@@ -852,45 +871,12 @@
     });
   }
   // ═══════════════════════════════════════════════════════════════════════════
-  // MODULE 9: CLIENT HINTS NEUTRALIZATION (per-tab profile)
+  // MODULE 9: CLIENT HINTS COHERENCE
   // ═══════════════════════════════════════════════════════════════════════════
 
-  if (on('navigator') && navigator.userAgentData) {
-    const fakeUAData = Object.freeze({
-      brands:   Object.freeze(TAB.uaBrands.map((b) => Object.freeze({ ...b }))),
-      mobile:   TAB.uaMobile,
-      platform: TAB.uaPlatform,
-
-      getHighEntropyValues: markNative(function getHighEntropyValues(hints) {
-        const safe = {
-          architecture:    '',
-          bitness:         '',
-          brands:          TAB.uaBrands,
-          fullVersionList: TAB.uaBrands.map((b) => ({ brand: b.brand, version: b.version + '.0.0' })),
-          mobile:          TAB.uaMobile,
-          model:           '',
-          platform:        TAB.uaPlatform,
-          platformVersion: TAB.uaPlatformVersion,
-          uaFullVersion:   TAB.uaFullVersion,
-          wow64:           false,
-        };
-        const result = {};
-        if (Array.isArray(hints)) {
-          for (const h of hints) { if (h in safe) result[h] = safe[h]; }
-        }
-        return Promise.resolve(result);
-      }, 'getHighEntropyValues'),
-
-      toJSON: markNative(function toJSON() {
-        return { brands: TAB.uaBrands, mobile: TAB.uaMobile, platform: TAB.uaPlatform };
-      }, 'toJSON'),
-    });
-
-    try {
-      defProp(Navigator.prototype, 'userAgentData', { get: function () { return fakeUAData; } });
-    } catch (_) {}
-  }
-
+  // Never replace low-entropy Client Hints with a cross-platform fake profile.
+  // The request headers and JS values must describe the same Chromium build.
+  // High-entropy hints are removed by declarativeNetRequest rules.
   // ═══════════════════════════════════════════════════════════════════════════
   // MODULE 10: SCREEN OVERRIDES (per-tab profile)
   // ═══════════════════════════════════════════════════════════════════════════
