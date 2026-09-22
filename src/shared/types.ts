@@ -1,6 +1,6 @@
 export type SecurityMode = 'maximum_direct';
 export type GeolocationMode = 'deny' | 'spoof' | 'custom';
-export type NetworkMode = 'direct_hardened';
+export type NetworkMode = 'direct_hardened' | 'local_tor';
 
 export interface ExtensionModules {
   webrtc: boolean; canvas: boolean; webgl: boolean; audio: boolean;
@@ -22,7 +22,7 @@ export interface ExtensionSettings {
   geolocationMode: GeolocationMode;
   spoofedLocation: { latitude: number; longitude: number; accuracy: number };
   excludedDomains: string[];
-  networkPrivacy: { mode: NetworkMode };
+  networkPrivacy: { mode: NetworkMode; torPort: 9050 | 9150 };
 }
 export interface TabPrivacyStats {
   tabId: number;
