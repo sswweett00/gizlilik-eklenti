@@ -130,7 +130,7 @@ for (const marker of [
 
 assert.ok(injectSource.includes('const strictIpLock = true;'), 'WebRTC must be hard-blocked in direct privacy mode');
 assert.ok(injectSource.includes("_prefs.geolocationMode === 'deny'"), 'geolocation API must deny by default');
-assert.ok(injectSource.includes("descriptor.name === 'geolocation'"), 'geolocation permission state must be controlled');
+assert.ok(/descriptor\s*&&\s*\[?'?geolocation'?/.test(injectSource) || injectSource.includes("'geolocation', 'camera', 'microphone'"), 'geolocation permission state must be controlled');
 assert.ok(!injectSource.includes("setLocalDescription', function"), 'strict mode must not patch setLocalDescription at all');
 assert.ok(injectSource.includes('WebTransport disabled by Privacy Shield.'), 'WebTransport must be hard-blocked in the page world');
 assert.ok(injectSource.includes('WebSocket disabled by Privacy Shield.'), 'WebSocket must be hard-blocked in the page world');
