@@ -32,7 +32,7 @@ Chrome documents contentSettings as a browser-level per-site control surface for
 
 Settings are stored with chrome.storage.local rather than sync/cloud storage. The MAIN-world hardening layer never trusts page-controlled sessionStorage for security state and never uses Math.random() for its privacy seed.
 
-A direct connection still exposes its source public IP to the destination. The extension's Direct Hardened mode blocks browser-side IP discovery and geolocation shortcuts but does not change the source IP. Privacy Shield 4.8 also supports an optional Local Tor mode: Chromium can be configured to use a local SOCKS5 Tor endpoint (`127.0.0.1:9050` or `127.0.0.1:9150`) with no direct fallback. This changes the network path, so the destination is expected to see the Tor exit address instead of the local public IP. It still does not reproduce Tor Browser's full anti-fingerprinting model.
+While active, Privacy Shield 4.9 does not expose a direct-network configuration. Chromium is forced toward a local SOCKS5 Tor endpoint (`127.0.0.1:9050` or `127.0.0.1:9150`) with no direct fallback. The browser remains fail-closed until the Tor exit is verified. This changes the network path so the destination is expected to see the Tor exit address instead of the local public IP; it still does not reproduce Tor Browser's full anti-fingerprinting model.
 
 ## URL cleaning
 
