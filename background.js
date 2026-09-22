@@ -244,6 +244,10 @@ async function getNetworkPrivacyStatus() {
 
   return {
     mode: settings.securityMode === 'maximum_direct' ? 'maximum_direct' : 'direct_hardened',
+    enabled: settings.enabled,
+    networkModuleEnabled: settings.modules.network,
+    webrtcModuleEnabled: settings.modules.webrtc,
+    browserPrivacyModuleEnabled: settings.modules.browserPrivacy,
     sourceIpVisibility: 'direct_connection_visible',
     webRtcPolicy: values['network.webRTCIPHandlingPolicy'],
     networkPrediction: values['network.networkPredictionEnabled'],
