@@ -618,5 +618,116 @@
         "webtransport"
       ]
     }
+  },
+  {
+    "id": 330,
+    "priority": 120,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "||httpbin.org/ip",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "script",
+        "image",
+        "ping",
+        "other",
+        "webtransport"
+      ]
+    }
+  },
+  {
+    "id": 331,
+    "priority": 120,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "||httpbin.org/anything",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "script",
+        "image",
+        "ping",
+        "other",
+        "webtransport"
+      ]
+    }
+  },
+  {
+    "id": 332,
+    "priority": 120,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "||cloudflare.com/cdn-cgi/trace",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "script",
+        "image",
+        "ping",
+        "other",
+        "webtransport"
+      ]
+    }
+  },
+  {
+    "id": 333,
+    "priority": 120,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "||www.cloudflare.com/cdn-cgi/trace",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "script",
+        "image",
+        "ping",
+        "other",
+        "webtransport"
+      ]
+    }
+  },
+  {
+    "id": 334,
+    "priority": 120,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "api.myip.com",
+        "curlmyip.org",
+        "curlmyip.com",
+        "eth0.me",
+        "ipecho.net",
+        "myexternalip.com",
+        "wtfismyip.com",
+        "api.ipify.org",
+        "api64.ipify.org",
+        "ipify.org"
+      ],
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "script",
+        "image",
+        "ping",
+        "other",
+        "webtransport"
+      ]
+    }
   }
 ]
