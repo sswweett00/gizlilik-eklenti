@@ -6,7 +6,7 @@ describe('URL cleaner rules', () => {
     const rules = buildUrlCleanerRule();
     expect(rules.length).toBeGreaterThanOrEqual(18);
     expect(rules.every((rule) => rule.action.type === 'redirect')).toBe(true);
-    expect(rules.every((rule) => rule.condition?.resourceTypes).toBeDefined()).toBe(true);
+    expect(rules.every((rule) => Array.isArray(rule.condition?.resourceTypes))).toBe(true);
     expect(rules.some((rule) => rule.condition?.regexFilter?.includes('utm_source'))).toBe(true);
     expect(rules.some((rule) => rule.condition?.regexFilter?.includes('fbclid'))).toBe(true);
     expect(rules.some((rule) => rule.condition?.regexFilter?.includes('gclid'))).toBe(true);
