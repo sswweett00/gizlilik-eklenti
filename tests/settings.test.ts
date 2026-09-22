@@ -68,8 +68,6 @@ describe('Privacy Shield settings', () => {
     expect(normalized.geolocationMode).toBe('deny');
   });
 
-});
-
   it('preserves unrelated module values during partial storage saves', async () => {
     let stored = normalizeSettings({ modules: { ...DEFAULT_SETTINGS.modules, canvas: false, ads: true } });
     vi.stubGlobal('chrome', {
@@ -88,3 +86,5 @@ describe('Privacy Shield settings', () => {
     expect(updated.modules.ads).toBe(true);
     vi.unstubAllGlobals();
   });
+
+});
