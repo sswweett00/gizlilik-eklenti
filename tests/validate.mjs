@@ -12,10 +12,10 @@ const urlRules = JSON.parse(read('rules/url-cleaner.json'));
 const permissionRules = JSON.parse(read('rules/permissions.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '4.7.0');
+assert.equal(manifest.version, '4.8.0');
 assert.deepEqual(
   manifest.permissions,
-  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'declarativeNetRequestFeedback', 'storage', 'tabs', 'contentSettings']
+  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'declarativeNetRequestFeedback', 'storage', 'tabs', 'contentSettings', 'proxy']
 );
 
 const worlds = manifest.content_scripts.map((entry) => ({
@@ -86,7 +86,7 @@ for (const marker of ['siteExceptionBtn', 'rotateIdentityBtn', 'rulesetValue', '
 
 console.log('Privacy Shield static validation passed.');
 
-assert.ok(!manifest.permissions.includes('proxy'), 'implementation must not require the proxy API');
+assert.ok(manifest.permissions.includes('proxy'), 'local Tor mode must request the Chrome proxy API');
 assert.equal(manifest.content_security_policy?.extension_pages, "script-src 'self'; object-src 'self';", 'extension-page CSP must block inline/eval script');
 assert.ok(!backgroundSource.includes('chrome.storage.sync'), 'settings must remain local-only');
 assert.ok(backgroundSource.includes("wanted.push('ad_rules')"), 'background must enable ad rules');
@@ -115,11 +115,13 @@ assert.ok(
 
 
 
-for (const forbidden of ['chrome.proxy', 'proxy_required', 'ipProtection', 'proxyHost', 'proxyPort', 'proxyScheme']) {
-  assert.ok(!backgroundSource.includes(forbidden), 'background contains removed proxy surface: ' + forbidden);
-  assert.ok(!injectSource.includes(forbidden), 'inject contains removed proxy surface: ' + forbidden);
-  assert.ok(!popupSource.includes(forbidden), 'popup contains removed proxy surface: ' + forbidden);
-}
+assert.ok(backgroundSource.includes('chrome.proxy.settings.set'), 'background must configure the browser proxy in local Tor mode');
+assert.ok(backgroundSource.includes("mode: 'local_tor'"), 'background must support local Tor mode');
+assert.ok(backgroundSource.includes("scheme: 'socks5'"), 'local Tor mode must use SOCKS5');
+assert.ok(backgroundSource.includes('127.0.0.1'), 'local Tor mode must target localhost only');
+assert.ok(!backgroundSource.includes('fallbackProxy'), 'local Tor mode must not use a direct fallback proxy');
+assert.ok(popupSource.includes('Verify Tor'), 'popup must expose Tor verification');
+assert.ok(popupSource.includes('Local Tor'), 'popup must expose local Tor path selection');
 
 for (const marker of [
   'networkPrivacy',
@@ -145,6 +147,9 @@ assert.ok(popupSource.includes('Direct Network Privacy'), 'popup must explain di
 assert.ok(popupSource.includes('Visible in direct mode'), 'popup must not falsely claim direct-IP anonymity');
 assert.ok(popupSource.includes('IP-location'), 'popup must disclose the IP-location limitation');
 assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum direct security mode must be the default');
+assert.ok(backgroundSource.includes("mode: 'direct_hardened'"), 'direct hardened network mode must remain the default');
+assert.ok(backgroundSource.includes('torPort: 9050'), 'Tor service port 9050 must be supported');
+assert.ok(backgroundSource.includes('CHECK_TOR'), 'background must expose fail-closed Tor verification');
 assert.ok(backgroundSource.includes("geolocationMode: 'deny'"), 'geolocation must be deny-by-default');
 assert.ok(new Set([...headerRules, ...permissionRules, ...trackerRules, ...networkRules, ...urlRules].map((rule) => rule.id)).size === headerRules.length + permissionRules.length + trackerRules.length + networkRules.length + urlRules.length, 'all static DNR rule IDs must be globally unique');
 assert.ok(permissionRules.some((rule) => rule.action?.responseHeaders?.some((h) => h.header === 'Permissions-Policy' && h.operation === 'set')), 'permission rules must enforce a Permissions-Policy response header');
@@ -203,7 +208,7 @@ for (const path of ['package.json','tsconfig.json','vite.config.ts','manifest.co
   assert.ok(fs.existsSync(path), 'typed architecture file missing: ' + path);
 }
 
-for (const domain of ['ipapi.co','ipinfo.io','ipwho.is','ip-api.com','ipgeolocation.io','ipdata.co','freeipapi.com','geolocation-db.com','ipapi.com','ip2location.io','api.ipify.org','api64.ipify.org','ipify.org','ifconfig.co','ifconfig.me','icanhazip.com','ident.me','ip.sb','myip.com','checkip.amazonaws.com','checkip.dyndns.org','whatismyip.akamai.com','ipv4.icanhazip.com','ipv6.icanhazip.com','api.my-ip.io','seeip.org','ip.seeip.org']) {
+for (const domain of ['ipapi.co','ipinfo.io','ipwho.is','ip-api.com','ipgeolocation.io','ipdata.co','freeipapi.com','geolocation-db.com','ipapi.com','ip2location.io','api.ipify.org','api64.ipify.org','ipify.org','ifconfig.co','ifconfig.me','icanhazip.com','ident.me','ip.sb','myip.com','checkip.amazonaws.com','checkip.dyndns.org','whatismyip.akamai.com','ipv4.icanhazip.com','ipv6.icanhazip.com','api.my-ip.io','seeip.org','ip.seeip.org','api.myip.com','curlmyip.org','curlmyip.com','eth0.me','ipecho.net','myexternalip.com','wtfismyip.com']) {
   assert.ok(networkRules.some((rule) => rule.condition?.requestDomains?.includes(domain)), 'network rules must block common IP geolocation endpoint: ' + domain);
 }
 
@@ -236,7 +241,11 @@ assert.ok(read('scripts/linux/mac-randomize.sh').includes('cloned-mac-address ra
 assert.ok(read('scripts/windows/privacy-audit.ps1').includes('getmac /v'), 'Windows privacy audit must inspect MAC');
 assert.ok(read('scripts/macos/privacy-audit.sh').includes('networksetup -listallhardwareports'), 'macOS privacy audit must inspect interfaces');
 
-console.log('Privacy Shield v3.0 static validation passed.');
+assert.ok(networkRules.some((rule) => rule.condition?.urlFilter === '||httpbin.org/ip'), 'httpbin IP echo must be blocked');
+assert.ok(networkRules.some((rule) => rule.condition?.urlFilter === '||cloudflare.com/cdn-cgi/trace'), 'Cloudflare trace IP endpoint must be blocked');
+assert.ok(networkRules.some((rule) => rule.id === 334 && rule.condition?.requestDomains?.includes('eth0.me')), 'additional IP echo services must be blocked');
+
+console.log('Privacy Shield v4.8 static validation passed.');
 
 const pkg = JSON.parse(read('package.json'));
 assert.ok(pkg.scripts?.build === 'vite build', 'build script must use Vite');
