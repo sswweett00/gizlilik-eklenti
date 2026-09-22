@@ -1,6 +1,6 @@
-# Privacy Shield 4.5
+# Privacy Shield 4.8
 
-Privacy Shield is a Manifest V3 privacy extension built around a hardened direct-connection Chromium/Firefox WebExtensions architecture.
+Privacy Shield is a Manifest V3 Chromium-first privacy extension with hardened direct-connection controls and an optional zero-cost local Tor SOCKS5 egress mode.
 
 ## Implemented architecture
 
@@ -32,15 +32,15 @@ Chrome documents contentSettings as a browser-level per-site control surface for
 
 Settings are stored with chrome.storage.local rather than sync/cloud storage. The MAIN-world hardening layer never trusts page-controlled sessionStorage for security state and never uses Math.random() for its privacy seed.
 
-One boundary is fundamental: a direct network connection still exposes its source public IP to the destination. The extension can block browser-side IP-discovery and geolocation APIs, but it cannot replace the source IP without an intermediary network path.
+A direct connection still exposes its source public IP to the destination. The extension's Direct Hardened mode blocks browser-side IP discovery and geolocation shortcuts but does not change the source IP. Privacy Shield 4.8 also supports an optional Local Tor mode: Chromium can be configured to use a local SOCKS5 Tor endpoint (`127.0.0.1:9050` or `127.0.0.1:9150`) with no direct fallback. This changes the network path, so the destination is expected to see the Tor exit address instead of the local public IP. It still does not reproduce Tor Browser's full anti-fingerprinting model.
 
 ## URL cleaning
 
 The URL cleaner removes high-confidence tracking parameters such as utm_*, gclid, fbclid, msclkid and yclid. Ambiguous generic parameters such as ref are intentionally preserved to reduce site breakage.
 
-## Cross-browser target
+## Browser support
 
-The manifest includes Firefox MV3 distribution metadata. The hardening path is primarily validated against Chromium/Chrome MV3; Firefox API coverage is retained as a distribution target but should be runtime-tested independently before treating every browser-level control as equivalent.
+The primary validated path is Chromium/Chrome MV3. Firefox metadata remains in the manifest, but the `chrome.proxy`-based Local Tor mode and some browser-level privacy controls require independent Firefox runtime validation before being treated as equivalent.
 
 ## Build
 
@@ -52,14 +52,19 @@ npm run build
 
 The CI workflow runs the same validation sequence and verifies the generated dist/manifest.json.
 
-## Direct-connection limitation
+## Network path modes
 
-This project is deliberately not a proxy/VPN/Tor implementation. If the destination must not see the real public IP, the browser must use Tor, VPN, proxy or another intermediary network path. Privacy Shield is the browser-side hardening layer; AEGIS-9 / Qubes-Whonix remains the system-level anonymity companion.
+- **Direct Hardened:** no intermediary. Browser-side IP discovery, WebRTC/STUN and common IP-echo/IP-geolocation endpoints are blocked, but the destination can still see the public source IP.
+- **Local Tor:** uses Chromium's browser proxy API with a localhost SOCKS5 Tor endpoint. The mode intentionally has no fallback proxy. When the Tor endpoint is unavailable, browser web requests are expected to fail instead of silently going direct. SOCKS5 handles TCP-based web traffic; WebRTC UDP is independently disabled by the privacy policy.
+
+This mode is zero-cost when Tor is running locally. It is a network-path integration, not a reimplementation of Tor, and it should not be treated as equivalent to Tor Browser's complete anti-fingerprinting and isolation model.
 
 
-## Recent hardening in 4.7
+## Recent hardening in 4.8
 
 - Browser-enforced Permissions-Policy response rules complement the page-world permission shims for geolocation, camera, microphone and hardware/sensor interfaces. Chrome DNR supports response-header modification, and Permissions-Policy can deny these features with empty allowlists. citeturn549246search2turn549246search0
 - OffscreenCanvas 2D image reads/exports receive the same deterministic canvas-noise treatment as ordinary canvas paths.
 - Common OS preference media queries exposed via matchMedia() are standardized under the Navigator hardening module.
 - Tracker and ad blocklists were expanded without increasing the number of static blocking rules.
+- Local Tor SOCKS5 egress was added with 9050/9150 support, fail-closed verification, proxy-state monitoring and restoration of the user's previous proxy configuration.
+- Additional IP-echo and server-side IP tracing endpoints were blocked.
