@@ -8,7 +8,7 @@ const trackerRules = JSON.parse(read('rules/trackers.json'));
 const networkRules = JSON.parse(read('rules/network.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '3.1.1');
+assert.equal(manifest.version, '4.0.0');
 assert.deepEqual(
   manifest.permissions,
   ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs']
@@ -115,5 +115,24 @@ assert.ok(injectSource.includes("defProp(Navigator.prototype, 'gpu'"), 'WebGPU m
 assert.ok(headerSource.includes('X-DNS-Prefetch-Control'), 'response rules must disable DNS prefetch hints');
 assert.ok(backgroundSource.includes("type !== 'webtransport' && type !== 'ping'"), 'site exceptions must not bypass critical transport/privacy blocks');
 assert.ok(popupSource.includes('Maximum direct mode'), 'popup must expose the maximum direct security posture');
+
+for (const path of [
+  'docs/ZERO_COST_DEPLOYMENT.md',
+  'docs/THREAT_MODEL.md',
+  'docs/VERIFICATION.md',
+  'scripts/linux/mac-randomize.sh',
+  'scripts/linux/privacy-audit.sh',
+  'scripts/windows/privacy-audit.ps1',
+  'scripts/macos/privacy-audit.sh',
+]) {
+  const source = read(path);
+  assert.ok(source.length > 200, 'deployment/security asset must be non-empty: ' + path);
+}
+
+assert.ok(read('docs/ZERO_COST_DEPLOYMENT.md').includes('Tails'), 'deployment guide must include Tails');
+assert.ok(read('docs/ZERO_COST_DEPLOYMENT.md').includes('Tor Browser'), 'deployment guide must include Tor Browser');
+assert.ok(read('scripts/linux/mac-randomize.sh').includes('cloned-mac-address random'), 'Linux MAC randomization tool must use NetworkManager random MAC');
+assert.ok(read('scripts/windows/privacy-audit.ps1').includes('getmac /v'), 'Windows privacy audit must inspect MAC');
+assert.ok(read('scripts/macos/privacy-audit.sh').includes('networksetup -listallhardwareports'), 'macOS privacy audit must inspect interfaces');
 
 console.log('Privacy Shield v3.0 static validation passed.');
