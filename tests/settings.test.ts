@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, normalizeSettings } from '../src/shared/storage';
+import { describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS, normalizeSettings, saveSettings } from '../src/shared/storage';
 
 describe('Privacy Shield settings', () => {
   it('preserves independent module toggles during normalization', () => {
@@ -44,3 +44,22 @@ describe('Privacy Shield settings', () => {
     expect(normalized.spoofedLocation.accuracy).toBe(1);
   });
 });
+
+  it('preserves unrelated module values during partial storage saves', async () => {
+    let stored = normalizeSettings({ modules: { ...DEFAULT_SETTINGS.modules, canvas: false, ads: true } });
+    vi.stubGlobal('chrome', {
+      storage: {
+        local: {
+          get: vi.fn(async () => ({ settings: stored })),
+          set: vi.fn(async ({ settings }) => { stored = settings; }),
+        },
+      },
+    });
+
+    const updated = await saveSettings({ modules: { webgl: false } });
+
+    expect(updated.modules.canvas).toBe(false);
+    expect(updated.modules.webgl).toBe(false);
+    expect(updated.modules.ads).toBe(true);
+    vi.unstubAllGlobals();
+  });
