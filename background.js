@@ -289,6 +289,11 @@ const TOR_PROXY_HOST = '127.0.0.1';
 const TOR_KILL_SWITCH_RULE_ID = 19000;
 const TOR_KILL_SWITCH_PRIORITY = 20000;
 const VALID_TOR_PORTS = new Set([9050, 9150]);
+const TOR_KILL_SWITCH_RESOURCE_TYPES = Object.freeze([
+  'main_frame', 'sub_frame', 'stylesheet', 'script', 'image', 'font',
+  'object', 'xmlhttprequest', 'ping', 'csp_report', 'media',
+  'websocket', 'webtransport', 'webbundle', 'other',
+]);
 
 function torProxyConfig(port) {
   if (!VALID_TOR_PORTS.has(port)) throw new Error('Unsupported local Tor port.');
@@ -405,6 +410,7 @@ async function setTorKillSwitch(enabled) {
           action: { type: 'block' },
           condition: {
             regexFilter: '^(https?|wss?):',
+            resourceTypes: TOR_KILL_SWITCH_RESOURCE_TYPES,
           },
         }],
       });
