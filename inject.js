@@ -499,8 +499,14 @@
         return orig.apply(this, args).then(sanitizeSDP);
       });
       overrideMethod(RTCPeerConnection.prototype, 'setLocalDescription', function (orig, args) {
-        const desc = args[0];
-        return orig.call(this, desc && desc.sdp ? sanitizeSDP(desc) : desc, args[1]);
+        // Preserve the native overload exactly. Passing an explicit undefined
+        // second argument triggers Chrome's legacy callback overload and causes
+        // "parameter 2 is not of type Function".
+        const nextArgs = Array.from(args);
+        if (nextArgs.length > 0 && nextArgs[0] && nextArgs[0].sdp) {
+          nextArgs[0] = sanitizeSDP(nextArgs[0]);
+        }
+        return orig.apply(this, nextArgs);
       });
     }
 
