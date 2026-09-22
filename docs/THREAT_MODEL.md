@@ -35,3 +35,15 @@ Can potentially correlate traffic timing/volume across Tor entry and exit observ
 | Cookies/storage | isolation and session hygiene | Deliberate login still identifies user |
 | MAC | Tails/OS randomization | Local network still sees the randomized address |
 | Downloads | isolate/open only inside privacy session | Malicious external apps can bypass browser protections |
+## AEGIS-9 system threats
+
+The browser extension is only one trust boundary. AEGIS-9 additionally addresses:
+
+- accidental direct routing by putting anonymous application qubes behind `sys-whonix`;
+- cross-activity contamination with Qubes app/disposable qubes;
+- host/device exposure through Qubes device isolation;
+- persistent browser state by using disposable qubes;
+- local observer awareness of Tor through optional Tor Bridges;
+- host-to-Gateway trust reduction through optional physical isolation.
+
+Qubes explicitly supports strong isolation, disposables, device isolation and Whonix integration. Whonix documents physical isolation as a method of reducing the trusted computing base, while warning that it is more difficult and less tested than standard VM deployments. citeturn978663search3turn978663search0
