@@ -353,8 +353,8 @@
     },
   };
 
-  // Do not trust sessionStorage for security state: it is writable by the
-  // page. Maximum mode starts from immutable extension defaults every document.
+  // Security state is supplied by the isolated-world bridge for every document.
+  // Defaults remain enabled until the extension settings arrive.
   let _modules = { ...MODULE_DEFAULTS, enabled: true };
   let _prefs = {
     ...PREF_DEFAULTS,
@@ -375,7 +375,6 @@
 
   const on = (mod) => {
     if (!_modules.enabled || _modules[mod] === false) return false;
-    if (_prefs.securityMode === 'maximum_direct') return true;
     return !isExcludedHost();
   };
 
@@ -1487,21 +1486,7 @@
     if (!_bridgeToken || d.token !== _bridgeToken) return;
 
     try {
-      // window.postMessage is observable by the page. In maximum mode the
-      // page must never be able to use a learned bridge token to relax
-      // protections, so this world remains fail-closed.
       const s = d.settings || {};
-      if (_prefs.securityMode === 'maximum_direct' || s.securityMode === 'maximum_direct') {
-        _prefs.securityMode = 'maximum_direct';
-        _modules = { ...MODULE_DEFAULTS, enabled: true };
-        _prefs.geolocationMode = 'deny';
-        _prefs.timezone = 'auto';
-        _prefs.spoofedLocation = null;
-        _prefs.excludedDomains = [];
-        _prefs.networkPrivacy = { mode: 'direct_hardened' };
-        persistCfg();
-        return;
-      }
 
       if (typeof s.enabled === 'boolean') _modules.enabled = s.enabled;
       if (s.modules && typeof s.modules === 'object') Object.assign(_modules, s.modules);
