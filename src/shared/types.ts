@@ -1,5 +1,5 @@
 export type SecurityMode = 'maximum_direct';
-export type GeolocationMode = 'deny';
+export type GeolocationMode = 'deny' | 'spoof' | 'custom';
 export type NetworkMode = 'direct_hardened';
 
 export interface ExtensionModules {
