@@ -464,7 +464,7 @@ async function applySiteExceptionRules() {
         action: { type: 'allow' },
         condition: {
           requestDomains: [domain],
-          resourceTypes: RESOURCE_TYPES.concat(['ping', 'websocket']),
+          resourceTypes: RESOURCE_TYPES,
         },
       });
 
@@ -486,6 +486,10 @@ async function applySiteExceptionRules() {
   } catch (err) {
     console.error('[PrivacyShield] Site exception rules failed:', err);
   }
+}
+
+function domainMatchesHost(host, domain) {
+  return !!host && (host === domain || host.endsWith('.' + domain));
 }
 
 function normalizeDomain(value) {
@@ -641,7 +645,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({
             success: true,
             tab: tab ? { id: tab.id, url: tab.url || '', title: tab.title || '', host } : null,
-            excluded: !!host && (settings.excludedDomains || []).includes(host),
+            excluded: !!host && (settings.excludedDomains || []).some((domain) => domainMatchesHost(host, domain)),
           });
           break;
         }
