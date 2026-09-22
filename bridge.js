@@ -25,7 +25,7 @@
       return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
     } catch (_) {
       // The bridge token is authentication for MAIN/ISOLATED messaging only;
-      // do not fall back to Date.now()/Math.random() entropy.
+      // fail closed if Web Crypto is unavailable.
       return '';
     }
   }
