@@ -34,6 +34,12 @@ const geoModeValue       = document.getElementById('geoModeValue');
 const rulesetValue       = document.getElementById('rulesetValue');
 const trackedTabsValue   = document.getElementById('trackedTabsValue');
 const matchedRuleCountValue = document.getElementById('matchedRuleCountValue');
+const networkModeSelect = document.getElementById('networkModeSelect');
+const torPortRow = document.getElementById('torPortRow');
+const torPortSelect = document.getElementById('torPortSelect');
+const verifyTorBtn = document.getElementById('verifyTorBtn');
+const networkModeValue = document.getElementById('networkModeValue');
+const networkVisibilityValue = document.getElementById('networkVisibilityValue');
 const currentSiteHost    = document.getElementById('currentSiteHost');
 const identitySummary    = document.getElementById('identitySummary');
 const siteExceptionBtn   = document.getElementById('siteExceptionBtn');
@@ -107,6 +113,17 @@ function renderUI(settings) {
   geoModeSelect.disabled = !settings.enabled || settings.modules.geolocation === false;
   toggleSpoofLocationSection(settings.geolocationMode === 'custom' && settings.enabled && settings.modules.geolocation !== false);
 
+  if (networkModeSelect) {
+    networkModeSelect.value = settings.networkPrivacy?.mode || 'direct_hardened';
+    networkModeSelect.disabled = !settings.enabled;
+  }
+  if (torPortSelect) {
+    torPortSelect.value = String(settings.networkPrivacy?.torPort || 9050);
+  }
+  if (torPortRow) {
+    torPortRow.hidden = settings.networkPrivacy?.mode !== 'local_tor';
+  }
+
   // Coordinates
   if (settings.spoofedLocation) {
     latInput.value = settings.spoofedLocation.latitude ?? '';
@@ -124,10 +141,35 @@ function renderNetworkPrivacyStatus(status) {
   const mode = status?.networkPrivacy;
   if (!mode) return;
 
+  const localTor = mode.proxyMode === 'local_tor';
+  const torActive = localTor && mode.proxyActive === true;
+
+  if (networkModeValue) {
+    networkModeValue.textContent = localTor
+      ? (torActive ? 'Local Tor · active' : 'Local Tor · not active')
+      : 'Direct hardened';
+  }
+  if (networkVisibilityValue) {
+    networkVisibilityValue.textContent = torActive
+      ? 'Expected hidden behind Tor'
+      : 'Visible to destination';
+  }
+
   if (!mode.enabled) {
     if (ipLockDot) ipLockDot.className = 'ip-lock-dot';
     if (ipLockTitle) ipLockTitle.textContent = 'Protection disabled';
     if (ipLockSub) ipLockSub.textContent = 'Privacy Shield is currently disabled.';
+    return;
+  }
+
+  if (localTor) {
+    if (ipLockDot) ipLockDot.className = torActive ? 'ip-lock-dot protected' : 'ip-lock-dot inactive';
+    if (ipLockTitle) ipLockTitle.textContent = torActive ? 'Local Tor egress active' : 'Local Tor selected — not reachable';
+    if (ipLockSub) {
+      ipLockSub.textContent = torActive
+        ? 'HTTP(S) traffic is routed through the selected local SOCKS5 endpoint with no DIRECT fallback.'
+        : 'Tor is selected but the local SOCKS5 proxy is not active. Verify Tor before browsing; DIRECT fallback is intentionally disabled.';
+    }
     return;
   }
 
@@ -137,10 +179,8 @@ function renderNetworkPrivacyStatus(status) {
   if (ipLockSub) {
     if (!active) {
       ipLockSub.textContent = 'Network, WebRTC and browser-level privacy modules are disabled.';
-    } else if (mode.sourceIpVisibility === 'direct_connection_visible') {
-      ipLockSub.textContent = 'WebRTC/IP-location surfaces are hardened, but a direct connection still exposes the public source IP to the destination.';
     } else {
-      ipLockSub.textContent = 'Network privacy hardening is active.';
+      ipLockSub.textContent = 'Browser-side IP discovery and network leak surfaces are hardened, but a direct connection still exposes the public source IP.';
     }
   }
 }
@@ -299,6 +339,49 @@ rotateIdentityBtn?.addEventListener('click', async () => {
 });
 
 
+
+networkModeSelect?.addEventListener('change', () => {
+  if (!currentSettings) return;
+  const mode = networkModeSelect.value === 'local_tor' ? 'local_tor' : 'direct_hardened';
+  currentSettings.networkPrivacy = {
+    mode,
+    torPort: Number(torPortSelect?.value) === 9150 ? 9150 : 9050,
+  };
+  if (torPortRow) torPortRow.hidden = mode !== 'local_tor';
+  scheduleSave();
+});
+
+torPortSelect?.addEventListener('change', () => {
+  if (!currentSettings) return;
+  currentSettings.networkPrivacy = {
+    mode: currentSettings.networkPrivacy?.mode === 'local_tor' ? 'local_tor' : 'direct_hardened',
+    torPort: Number(torPortSelect.value) === 9150 ? 9150 : 9050,
+  };
+  scheduleSave();
+});
+
+verifyTorBtn?.addEventListener('click', async () => {
+  verifyTorBtn.disabled = true;
+  verifyTorBtn.textContent = 'Checking…';
+  try {
+    const response = await sendMessage({ type: 'CHECK_TOR' });
+    if (response?.success && response?.isTor) {
+      verifyTorBtn.textContent = 'Tor verified';
+      if (ipLockSub) ipLockSub.textContent = 'Tor verification succeeded; the browser is reaching the Tor Project through the local Tor path.';
+    } else {
+      verifyTorBtn.textContent = response?.success ? 'Not a Tor exit' : 'Tor failed';
+      if (ipLockSub) ipLockSub.textContent = response?.error || 'The selected proxy did not verify as Tor.';
+    }
+  } catch (err) {
+    verifyTorBtn.textContent = 'Tor failed';
+    if (ipLockSub) ipLockSub.textContent = err?.message || 'Tor verification failed.';
+  } finally {
+    setTimeout(() => {
+      verifyTorBtn.textContent = 'Verify Tor';
+      verifyTorBtn.disabled = false;
+    }, 1800);
+  }
+});
 
 // Master toggle
 masterToggle.addEventListener('change', () => {
