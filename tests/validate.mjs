@@ -136,7 +136,7 @@ assert.ok(popupSource.includes('Visible in direct mode'), 'popup must not falsel
 assert.ok(popupSource.includes('IP-location'), 'popup must disclose the IP-location limitation');
 assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum direct security mode must be the default');
 assert.ok(backgroundSource.includes("geolocationMode: 'deny'"), 'geolocation must be deny-by-default');
-assert.ok(new Set([...headerRules, ...trackerRules, ...networkRules].map((rule) => rule.id)).size === headerRules.length + trackerRules.length + networkRules.length, 'all static DNR rule IDs must be globally unique');
+assert.ok(new Set([...headerRules, ...trackerRules, ...networkRules, ...urlRules].map((rule) => rule.id)).size === headerRules.length + trackerRules.length + networkRules.length + urlRules.length, 'all static DNR rule IDs must be globally unique');
 assert.ok(backgroundSource.includes("normalized.modules[key] = true"), 'maximum mode must lock all modules on');
 assert.ok(backgroundSource.includes('normalized.enabled = true'), 'maximum mode must be fail-closed and cannot be disabled');
 assert.ok(backgroundSource.includes('HARDENED_CONTENT_SETTINGS'), 'browser-level content settings must enforce privacy');
