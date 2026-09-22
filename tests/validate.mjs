@@ -155,6 +155,9 @@ assert.ok(backgroundSource.includes('LOCAL_TOR_FORCED_MODULES'), 'Local Tor must
 assert.ok(injectSource.includes('const strictIpLock = true;'), 'WebRTC page lock must remain present for fail-closed IP protection');
 assert.ok(backgroundSource.includes('torPort: 9050'), 'Tor service port 9050 must be supported');
 assert.ok(backgroundSource.includes('CHECK_TOR'), 'background must expose fail-closed Tor verification');
+assert.ok(backgroundSource.includes('verifyTorPath'), 'Tor mode must verify the actual Tor exit path');
+assert.ok(backgroundSource.includes('torVerification'), 'Tor verification state must be tracked');
+assert.ok(backgroundSource.includes('setTorKillSwitch(false)'), 'traffic unlock must only occur after verified Tor state');
 assert.ok(backgroundSource.includes("geolocationMode: 'deny'"), 'geolocation must be deny-by-default');
 assert.ok(new Set([...headerRules, ...permissionRules, ...trackerRules, ...networkRules, ...urlRules].map((rule) => rule.id)).size === headerRules.length + permissionRules.length + trackerRules.length + networkRules.length + urlRules.length, 'all static DNR rule IDs must be globally unique');
 assert.ok(permissionRules.some((rule) => rule.action?.responseHeaders?.some((h) => h.header === 'Permissions-Policy' && h.operation === 'set')), 'permission rules must enforce a Permissions-Policy response header');
