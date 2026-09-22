@@ -55,7 +55,8 @@ const backgroundSource = background;
 const injectSource = read('inject.js');
 const popupSource = read('popup.html') + '\n' + read('popup.js');
 assert.ok(background.includes('function enqueue('), 'background must define enqueue before use');
-assert.ok(background.includes('await enqueue(() => rebuildAllSessionRules());'), 'background must serialize session-rule rebuilds');
+assert.ok(background.includes('let settingsApplyQueue = Promise.resolve();'), 'background must serialize settings reapply operations');
+assert.ok(background.includes('await rebuildAllSessionRules();'), 'background must rebuild session rules during settings reapply');
 for (const marker of [
   'applySiteExceptionRules',
   'settingsRequireReload',
