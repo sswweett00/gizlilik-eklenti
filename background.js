@@ -79,6 +79,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   await applyContentSettings();
   await applyRuleSets();
   await applySiteExceptionRules();
+  await applyNetworkProxy();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
@@ -88,6 +89,7 @@ chrome.runtime.onStartup.addListener(async () => {
   await applyContentSettings();
   await applyRuleSets();
   await applySiteExceptionRules();
+  await applyNetworkProxy();
 });
 
 // ─── Privacy API Settings ─────────────────────────────────────────────────────
@@ -230,21 +232,145 @@ async function getNetworkPrivacyStatus() {
     }
   }
 
+  let proxyState = null;
+  try { proxyState = await getCurrentProxy(); } catch (_) {}
+
+  const torExpected = settings.enabled && settings.networkPrivacy.mode === 'local_tor';
+  const torActive = torExpected && isOurTorProxy(proxyState?.value, settings.networkPrivacy.torPort);
+  const lastProxyError = (await chrome.storage.session.get('lastProxyError')).lastProxyError || null;
+
   return {
     mode: settings.securityMode === 'maximum_direct' ? 'maximum_direct' : 'direct_hardened',
     enabled: settings.enabled,
     networkModuleEnabled: settings.modules.network,
     webrtcModuleEnabled: settings.modules.webrtc,
     browserPrivacyModuleEnabled: settings.modules.browserPrivacy,
-    sourceIpVisibility: 'direct_connection_visible',
+    proxyMode: settings.networkPrivacy.mode,
+    torPort: settings.networkPrivacy.torPort,
+    proxyActive: torActive,
+    proxyControlLevel: proxyState?.levelOfControl || null,
+    sourceIpVisibility: torActive ? 'expected_hidden_via_local_tor' : 'direct_connection_visible',
     webRtcPolicy: values['network.webRTCIPHandlingPolicy'],
     networkPrediction: values['network.networkPredictionEnabled'],
     topicsEnabled: values['websites.topicsEnabled'],
     fledgeEnabled: values['websites.fledgeEnabled'],
     adMeasurementEnabled: values['websites.adMeasurementEnabled'],
     thirdPartyCookiesAllowed: values['websites.thirdPartyCookiesAllowed'],
-    note: 'A direct web connection necessarily exposes its source public IP to the destination server. No browser extension can change the source IP of that direct network connection without an intermediary network layer.',
+    lastProxyError,
+    note: torActive
+      ? 'HTTP(S) web traffic is configured through the local SOCKS5 Tor endpoint with no direct fallback. Verify Tor separately to confirm the local daemon is reachable.'
+      : 'A direct web connection exposes its source public IP to the destination. Browser-side IP discovery can be blocked, but hiding the source IP requires an intermediary network path.',
   };
+}
+
+// ─── Zero-cost local Tor egress ────────────────────────────────────────────────
+
+const NETWORK_PROXY_BASELINE_KEY = 'networkProxyBaseline';
+const TOR_PROXY_HOST = '127.0.0.1';
+const VALID_TOR_PORTS = new Set([9050, 9150]);
+
+function torProxyConfig(port) {
+  return {
+    mode: 'fixed_servers',
+    rules: {
+      singleProxy: {
+        scheme: 'socks5',
+        host: TOR_PROXY_HOST,
+        port,
+      },
+    },
+  };
+}
+
+function proxyServerIsLocalTor(server, port) {
+  return !!server &&
+    server.scheme === 'socks5' &&
+    server.host === TOR_PROXY_HOST &&
+    server.port === port;
+}
+
+function isOurTorProxy(value, port = 9050) {
+  if (!value || value.mode !== 'fixed_servers') return false;
+  const rules = value.rules || {};
+  const server = rules.singleProxy || rules.proxyForHttp || rules.proxyForHttps;
+  return proxyServerIsLocalTor(server, port) &&
+    !rules.fallbackProxy &&
+    !rules.bypassList?.length;
+}
+
+async function getCurrentProxy() {
+  try {
+    return await chrome.proxy.settings.get({ incognito: false });
+  } catch (err) {
+    return { value: null, levelOfControl: 'not_controllable', error: err?.message || String(err) };
+  }
+}
+
+async function applyNetworkProxy() {
+  if (!chrome.proxy?.settings) return;
+
+  const settings = await getSettings();
+  const torSelected = settings.enabled && settings.networkPrivacy?.mode === 'local_tor';
+  const stored = await chrome.storage.local.get(NETWORK_PROXY_BASELINE_KEY);
+  const baseline = stored[NETWORK_PROXY_BASELINE_KEY];
+
+  try {
+    const current = await getCurrentProxy();
+
+    if (torSelected) {
+      if (!baseline?.value) {
+        if (isOurTorProxy(current.value, settings.networkPrivacy.torPort)) return;
+        await chrome.storage.local.set({
+          [NETWORK_PROXY_BASELINE_KEY]: {
+            value: current.value || { mode: 'system' },
+            capturedAt: Date.now(),
+          },
+        });
+      }
+      await chrome.proxy.settings.set({
+        value: torProxyConfig(settings.networkPrivacy.torPort),
+        scope: 'regular',
+      });
+      return;
+    }
+
+    if (baseline?.value && isOurTorProxy(current.value, 9050) || baseline?.value && isOurTorProxy(current.value, 9150)) {
+      await chrome.proxy.settings.set({
+        value: baseline.value,
+        scope: 'regular',
+      });
+    }
+    if (baseline?.value) {
+      await chrome.storage.local.remove(NETWORK_PROXY_BASELINE_KEY);
+    }
+  } catch (err) {
+    console.error('[PrivacyShield] Local Tor proxy apply/restore failed:', err);
+  }
+}
+
+if (chrome.proxy?.onProxyError) {
+  chrome.proxy.onProxyError.addListener((details) => {
+    chrome.storage.session.set({
+      lastProxyError: {
+        message: String(details?.error || 'Proxy error'),
+        details: String(details?.details || ''),
+        fatal: details?.fatal === true,
+        at: Date.now(),
+      },
+    }).catch(() => {});
+  });
+}
+
+if (chrome.proxy?.settings?.onChange) {
+  chrome.proxy.settings.onChange.addListener(() => {
+    getSettings().then((settings) => {
+      if (settings.enabled && settings.networkPrivacy?.mode === 'local_tor') {
+        applyNetworkProxy().catch((err) =>
+          console.error('[PrivacyShield] Tor proxy re-apply failed:', err)
+        );
+      }
+    }).catch(() => {});
+  });
 }
 
 // ─── Static Rulesets ───────────────────────────────────────────────────────────
@@ -463,7 +589,11 @@ function sanitizeIncomingSettings(raw) {
   }
 
   if (raw.networkPrivacy && typeof raw.networkPrivacy === 'object' && !Array.isArray(raw.networkPrivacy)) {
-    out.networkPrivacy = { mode: 'direct_hardened' };
+    const torPort = Number(raw.networkPrivacy.torPort);
+    out.networkPrivacy = {
+      mode: raw.networkPrivacy.mode === 'local_tor' ? 'local_tor' : 'direct_hardened',
+      torPort: torPort === 9150 ? 9150 : 9050,
+    };
   }
 
   if (raw.modules && typeof raw.modules === 'object' && !Array.isArray(raw.modules)) {
@@ -504,7 +634,10 @@ function normalizeSettings(raw) {
   const normalized = deepMerge(DEFAULT_SETTINGS, sanitizeIncomingSettings(raw || {}));
 
   normalized.securityMode = 'maximum_direct';
-  normalized.networkPrivacy = { mode: 'direct_hardened' };
+  normalized.networkPrivacy = {
+    mode: normalized.networkPrivacy?.mode === 'local_tor' ? 'local_tor' : 'direct_hardened',
+    torPort: normalized.networkPrivacy?.torPort === 9150 ? 9150 : 9050,
+  };
   normalized.excludedDomains = Array.isArray(normalized.excludedDomains) ? normalized.excludedDomains : [];
   normalized.modules = {
     ...DEFAULT_SETTINGS.modules,
@@ -598,6 +731,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'GET_NETWORK_PRIVACY_STATUS': {
           sendResponse({ success: true, status: await getNetworkPrivacyStatus() });
+          break;
+        }
+
+        case 'CHECK_TOR': {
+          const settings = await getSettings();
+          if (!settings.enabled || settings.networkPrivacy.mode !== 'local_tor') {
+            sendResponse({ success: false, error: 'Local Tor mode is not enabled.' });
+            break;
+          }
+          try {
+            const response = await fetch('https://check.torproject.org/api/ip', {
+              cache: 'no-store',
+              redirect: 'error',
+            });
+            if (!response.ok) throw new Error('Tor verification endpoint returned HTTP ' + response.status);
+            const payload = await response.json();
+            sendResponse({
+              success: true,
+              isTor: payload?.IsTor === true,
+              exitIp: typeof payload?.IP === 'string' ? payload.IP : null,
+            });
+          } catch (err) {
+            sendResponse({
+              success: false,
+              error: 'Local Tor connection failed: ' + (err?.message || String(err)),
+            });
+          }
           break;
         }
 
@@ -784,6 +944,7 @@ async function applySettingsRuntime(previousSettings, nextSettings) {
   await applyRuleSets();
   await applySiteExceptionRules();
   await rebuildAllSessionRules();
+  await applyNetworkProxy();
   await broadcastSettingsToTabs();
 
   if (settingsRequireReload(previousSettings, settings)) {
