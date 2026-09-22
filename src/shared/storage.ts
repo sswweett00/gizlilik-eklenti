@@ -25,7 +25,7 @@ export function normalizeSettings(input: Partial<ExtensionSettings> | null | und
     geolocationMode:'deny', spoofedLocation:null, excludedDomains:uniqueDomains(raw.excludedDomains),
     networkPrivacy:{ mode:'direct_hardened' },
   };
-  normalized.modules = Object.fromEntries(Object.keys(DEFAULT_SETTINGS.modules).map((key)=>[key,true])) as ExtensionModules;
+  normalized.modules = { ...DEFAULT_SETTINGS.modules };
   return normalized;
 }
 export async function loadSettings(): Promise<ExtensionSettings> {
