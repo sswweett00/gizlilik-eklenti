@@ -21,12 +21,25 @@ export function normalizeSettings(input: Partial<ExtensionSettings> | null | und
   const raw = (input ?? {}) as Partial<ExtensionSettings>;
   const modules: ExtensionModules = { ...DEFAULT_SETTINGS.modules, ...(raw.modules ?? {}) };
   const normalized: ExtensionSettings = {
-    ...DEFAULT_SETTINGS, ...raw, enabled: raw.enabled !== false, securityMode:'maximum_direct',
-    modules, timezone: typeof raw.timezone === 'string' && raw.timezone ? raw.timezone : 'auto',
-    geolocationMode:'deny', spoofedLocation:null, excludedDomains:uniqueDomains(raw.excludedDomains),
+    ...DEFAULT_SETTINGS,
+    ...raw,
+    enabled: raw.enabled !== false,
+    securityMode:'maximum_direct',
+    modules,
+    timezone: typeof raw.timezone === 'string' && raw.timezone ? raw.timezone : 'auto',
+    geolocationMode: raw.geolocationMode === 'spoof' || raw.geolocationMode === 'custom' ? raw.geolocationMode : 'deny',
+    spoofedLocation: raw.spoofedLocation && Number.isFinite(raw.spoofedLocation.latitude) && Number.isFinite(raw.spoofedLocation.longitude)
+      ? {
+          latitude: Math.min(90, Math.max(-90, raw.spoofedLocation.latitude)),
+          longitude: Math.min(180, Math.max(-180, raw.spoofedLocation.longitude)),
+          accuracy: Number.isFinite(raw.spoofedLocation.accuracy)
+            ? Math.min(10000, Math.max(1, raw.spoofedLocation.accuracy))
+            : DEFAULT_SETTINGS.spoofedLocation.accuracy,
+        }
+      : { ...DEFAULT_SETTINGS.spoofedLocation },
+    excludedDomains:uniqueDomains(raw.excludedDomains),
     networkPrivacy:{ mode:'direct_hardened' },
   };
-  normalized.modules = { ...DEFAULT_SETTINGS.modules };
   return normalized;
 }
 export async function loadSettings(): Promise<ExtensionSettings> {
