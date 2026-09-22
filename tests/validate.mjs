@@ -5,6 +5,7 @@ const read = (path) => fs.readFileSync(path, 'utf8');
 const manifest = JSON.parse(read('manifest.json'));
 const headerRules = JSON.parse(read('rules/rules.json'));
 const trackerRules = JSON.parse(read('rules/trackers.json'));
+const networkRules = JSON.parse(read('rules/network.json'));
 
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.version, '3.1.1');
@@ -24,7 +25,7 @@ for (const path of ['background.js', 'bridge.js', 'inject.js', 'popup.js']) {
   assert.doesNotThrow(() => new Function(read(path)), path + ' should parse as JavaScript');
 }
 
-for (const [name, rules] of [['header', headerRules], ['tracker', trackerRules]]) {
+for (const [name, rules] of [['header', headerRules], ['tracker', trackerRules], ['network', networkRules]]) {
   const ids = rules.map((rule) => rule.id);
   assert.equal(new Set(ids).size, ids.length, name + ' rule IDs must be unique');
   for (const rule of rules) {
@@ -106,6 +107,8 @@ assert.ok(injectSource.includes('WebTransport disabled by Privacy Shield.'), 'We
 assert.ok(popupSource.includes('Direct Network Privacy'), 'popup must explain direct-connection privacy semantics');
 assert.ok(popupSource.includes('Visible to destination'), 'popup must not falsely claim direct-IP anonymity');
 assert.ok(backgroundSource.includes("securityMode: 'maximum_direct'"), 'maximum direct security mode must be the default');
+assert.ok(backgroundSource.includes("geolocationMode: 'deny'"), 'geolocation must be deny-by-default');
+assert.ok(new Set([...headerRules, ...trackerRules, ...networkRules].map((rule) => rule.id)).size === headerRules.length + trackerRules.length + networkRules.length, 'all static DNR rule IDs must be globally unique');
 assert.ok(backgroundSource.includes("normalized.modules[key] = true"), 'maximum mode must lock all modules on');
 assert.ok(injectSource.includes("securityMode: 'maximum_direct'"), 'injector must default to maximum direct mode');
 assert.ok(injectSource.includes('crypto.getRandomValues'), 'identity seed must prefer Web Crypto entropy');
