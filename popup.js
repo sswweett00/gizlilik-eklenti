@@ -20,10 +20,6 @@ const masterToggle       = document.getElementById('masterToggle');
 const statusDot          = document.getElementById('statusDot');
 const statusLabel        = document.getElementById('statusLabel');
 const activeModulesCount = document.getElementById('activeModulesCount');
-const ipProtectionMode  = document.getElementById('ipProtectionMode');
-const proxyScheme       = document.getElementById('proxyScheme');
-const proxyHost         = document.getElementById('proxyHost');
-const proxyPort         = document.getElementById('proxyPort');
 const ipLockDot         = document.getElementById('ipLockDot');
 const ipLockTitle       = document.getElementById('ipLockTitle');
 const ipLockSub         = document.getElementById('ipLockSub');
@@ -123,24 +119,15 @@ const GEO_MODE_LABELS = {
 };
 
 function renderIpProtectionStatus(status) {
-  const mode = status?.ipProtection;
+  const mode = status?.networkPrivacy;
   if (!mode) return;
 
-  const locked = mode.mode === 'proxy_required' && mode.state !== 'proxy';
-  if (ipLockDot) ipLockDot.className = 'ip-lock-dot ' + (locked ? 'locked' : 'protected');
-  if (ipLockTitle) {
-    if (mode.mode === 'browser_only') ipLockTitle.textContent = 'Browser protections only';
-    else if (mode.state === 'proxy') ipLockTitle.textContent = 'Strict IP lock active';
-    else ipLockTitle.textContent = 'Network locked — proxy required';
-  }
+  if (ipLockDot) ipLockDot.className = 'ip-lock-dot protected';
+  if (ipLockTitle) ipLockTitle.textContent = 'Direct connection hardened';
   if (ipLockSub) {
-    if (mode.mode === 'browser_only') {
-      ipLockSub.textContent = 'Sites can still see the network exit IP of the browser connection.';
-    } else if (mode.state === 'proxy') {
-      ipLockSub.textContent = 'Web traffic is routed through the configured proxy. No DIRECT fallback is configured.';
-    } else {
-      ipLockSub.textContent = 'No usable proxy is configured. Direct site connections are blocked.';
-    }
+    ipLockSub.textContent = mode.sourceIpVisibility === 'direct_connection_visible'
+      ? 'Browser leak surfaces are hardened, but the destination still sees the public IP of the direct connection.'
+      : 'Network privacy hardening is active.';
   }
 }
 
@@ -233,35 +220,6 @@ async function refreshActiveTab() {
 }
 
 // ─── Event Listeners ──────────────────────────────────────────────────────────
-
-function updateIpProtectionFromUi() {
-  if (!currentSettings) return;
-
-  currentSettings.ipProtection = currentSettings.ipProtection || {
-    mode: 'proxy_required',
-    scheme: 'socks5',
-    host: '',
-    port: 1080,
-  };
-
-  currentSettings.ipProtection.mode =
-    ipProtectionMode?.value === 'browser_only' ? 'browser_only' : 'proxy_required';
-  currentSettings.ipProtection.scheme = proxyScheme?.value || 'socks5';
-  currentSettings.ipProtection.host = (proxyHost?.value || '').trim();
-
-  const port = Number(proxyPort?.value);
-  currentSettings.ipProtection.port =
-    Number.isInteger(port) && port >= 1 && port <= 65535 ? port : 1080;
-
-  scheduleSave();
-}
-
-[ipProtectionMode, proxyScheme, proxyHost, proxyPort].forEach((element) => {
-  element?.addEventListener('change', updateIpProtectionFromUi);
-  element?.addEventListener('input', debounce(updateIpProtectionFromUi, 300));
-});
-
-
 
 siteExceptionBtn?.addEventListener('click', async () => {
   siteExceptionBtn.disabled = true;
