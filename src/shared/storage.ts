@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   modules: {
     webrtc:true,canvas:true,webgl:true,audio:true,fonts:true,navigator:true,
     screen:true,geolocation:true,timezone:true,headers:true,permissions:true,network:true,
+    trackers:true,ads:true,urlCleaner:true,browserPrivacy:true,
   },
   timezone: 'auto',
   geolocationMode: 'deny',
