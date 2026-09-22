@@ -7,10 +7,10 @@ const headerRules = JSON.parse(read('rules/rules.json'));
 const trackerRules = JSON.parse(read('rules/trackers.json'));
 
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, '2.2.0');
+assert.equal(manifest.version, '2.3.0');
 assert.deepEqual(
   manifest.permissions,
-  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs']
+  ['privacy', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'tabs', 'proxy']
 );
 
 const worlds = manifest.content_scripts.map((entry) => ({
@@ -67,3 +67,18 @@ for (const marker of ['siteExceptionBtn', 'rotateIdentityBtn', 'rulesetValue', '
 }
 
 console.log('Privacy Shield static validation passed.');
+
+const backgroundSource = read('background.js');
+assert.ok(backgroundSource.includes("mode: 'proxy_required'"), 'strict IP protection must be the default');
+assert.ok(backgroundSource.includes('PROXY 127.0.0.1:9'), 'missing proxy must fail closed');
+assert.ok(backgroundSource.includes('mandatory: true'), 'lock PAC must be mandatory');
+assert.ok(backgroundSource.includes('fallbackProxy: proxy'), 'strict proxy mode must cover fallback traffic with the same proxy');
+assert.ok(!backgroundSource.includes('direct://'), 'strict mode must not configure DIRECT fallback');
+
+const injectSource = read('inject.js');
+assert.ok(injectSource.includes('WebRTC disabled by Privacy Shield IP Lock.'), 'strict IP mode must disable WebRTC');
+
+const popupSource = read('popup.html') + '\n' + read('popup.js');
+for (const marker of ['ipProtectionMode', 'proxyScheme', 'proxyHost', 'proxyPort', 'ipLockTitle']) {
+  assert.ok(popupSource.includes(marker), 'popup missing ' + marker);
+}
