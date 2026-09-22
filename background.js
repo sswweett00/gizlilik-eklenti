@@ -31,6 +31,10 @@ const DEFAULT_SETTINGS = {
     headers: true,
     permissions: true,
     network: true,
+    trackers: true,
+    ads: true,
+    urlCleaner: true,
+    browserPrivacy: true,
   },
   timezone: 'auto', // 'auto' = unique per-tab timezone from the city pool
   securityMode: 'maximum_direct',
@@ -98,23 +102,28 @@ const PRIVACY_ITEMS = () => [
   chrome.privacy.websites.thirdPartyCookiesAllowed,
 ];
 
+function privacyModuleForKey(key) {
+  return key === 'network.webRTCIPHandlingPolicy' ? 'webrtc' : 'browserPrivacy';
+}
+
 async function applyPrivacySettings() {
   const s = await getSettings();
 
   try {
+    const { privacyPolicy } = await chrome.storage.session.get('privacyPolicy');
+
     if (!s.enabled) {
-      const { privacyPolicy } = await chrome.storage.session.get('privacyPolicy');
-      for (const [key, setting] of HARDENED_PRIVACY_ITEMS()) {
-        const original = privacyPolicy?.original?.[key];
-        if (original !== undefined) {
-          try { await setting.set({ value: original, scope: 'regular' }); } catch (_) {}
+      if (privacyPolicy?.original) {
+        for (const [key, setting] of HARDENED_PRIVACY_ITEMS()) {
+          const original = privacyPolicy.original[key];
+          if (original !== undefined) {
+            try { await setting.set({ value: original, scope: 'regular' }); } catch (_) {}
+          }
         }
       }
-      await chrome.storage.session.remove('privacyPolicy');
       return;
     }
 
-    const { privacyPolicy } = await chrome.storage.session.get('privacyPolicy');
     if (!privacyPolicy?.original) {
       const original = {};
       for (const [key, setting] of HARDENED_PRIVACY_ITEMS()) {
@@ -126,20 +135,29 @@ async function applyPrivacySettings() {
       await chrome.storage.session.set({ privacyPolicy: { original, updatedAt: Date.now() } });
     }
 
+    const stored = (await chrome.storage.session.get('privacyPolicy')).privacyPolicy;
     for (const [key, setting, value] of HARDENED_PRIVACY_ITEMS()) {
-      if (key === 'network.webRTCIPHandlingPolicy' && !s.modules.webrtc) continue;
-      try {
-        await setting.set({ value, scope: 'regular' });
-      } catch (err) {
-        console.warn('[PrivacyShield] Privacy setting unavailable:', key, err?.message || err);
+      const moduleKey = privacyModuleForKey(key);
+      if (s.modules[moduleKey]) {
+        try {
+          await setting.set({ value, scope: 'regular' });
+        } catch (err) {
+          console.warn('[PrivacyShield] Privacy setting unavailable:', key, err?.message || err);
+        }
+      } else {
+        const original = stored?.original?.[key];
+        if (original !== undefined) {
+          try { await setting.set({ value: original, scope: 'regular' }); } catch (_) {}
+        }
       }
     }
 
-    console.log('[PrivacyShield] Direct privacy policy applied.');
+    console.log('[PrivacyShield] Module-aware privacy policy applied.');
   } catch (err) {
     console.error('[PrivacyShield] Error applying privacy settings:', err);
   }
 }
+
 
 // ─── Browser Content Settings Hardening ──────────────────────────────────────
 // The page-world API shims are defense-in-depth. Chrome content settings provide
@@ -154,34 +172,39 @@ const HARDENED_CONTENT_SETTINGS = () => [
   ['cookies', chrome.contentSettings.cookies, 'session_only'],
 ];
 
+function contentSettingModuleForKey(key) {
+  if (key === 'location') return 'geolocation';
+  if (key === 'cookies') return 'browserPrivacy';
+  return 'permissions';
+}
+
 async function applyContentSettings() {
   try {
     const currentSettings = await getSettings();
     const settingsList = HARDENED_CONTENT_SETTINGS();
 
-    if (!currentSettings.enabled) {
-      for (const [, setting] of settingsList) {
-        try { await setting.clear({ scope: 'regular' }); } catch (_) {}
-      }
-      return;
-    }
-
-    for (const [, setting, value] of settingsList) {
+    for (const [key, setting, value] of settingsList) {
+      const enabled = currentSettings.enabled && currentSettings.modules[contentSettingModuleForKey(key)];
       try {
-        await setting.set({
-          primaryPattern: '<all_urls>',
-          secondaryPattern: '<all_urls>',
-          setting: value,
-          scope: 'regular',
-        });
+        if (enabled) {
+          await setting.set({
+            primaryPattern: '<all_urls>',
+            secondaryPattern: '<all_urls>',
+            setting: value,
+            scope: 'regular',
+          });
+        } else {
+          await setting.clear({ scope: 'regular' });
+        }
       } catch (err) {
-        console.warn('[PrivacyShield] Content setting unavailable:', err?.message || err);
+        console.warn('[PrivacyShield] Content setting unavailable:', key, err?.message || err);
       }
     }
   } catch (err) {
     console.error('[PrivacyShield] Content settings hardening failed:', err);
   }
 }
+
 
 // ─── Direct-Connection Privacy Hardening ────────────────────────────────────
 
@@ -202,33 +225,9 @@ const HARDENED_PRIVACY_ITEMS = () => [
 ];
 
 async function applyDirectPrivacyPolicy() {
-  const settings = await getSettings();
-  if (!settings.enabled) return;
-
-  try {
-    const { privacyPolicy } = await chrome.storage.session.get('privacyPolicy');
-    if (!privacyPolicy?.original) {
-      const original = {};
-      for (const [key, setting] of HARDENED_PRIVACY_ITEMS()) {
-        try {
-          const current = await setting.get({ scope: 'regular' });
-          if (current?.value !== undefined) original[key] = current.value;
-        } catch (_) {}
-      }
-      await chrome.storage.session.set({ privacyPolicy: { original, updatedAt: Date.now() } });
-    }
-
-    for (const [, setting, value] of HARDENED_PRIVACY_ITEMS()) {
-      try {
-        await setting.set({ value, scope: 'regular' });
-      } catch (err) {
-        console.warn('[PrivacyShield] Privacy setting unavailable:', err?.message || err);
-      }
-    }
-  } catch (err) {
-    console.error('[PrivacyShield] Direct privacy hardening failed:', err);
-  }
+  return applyPrivacySettings();
 }
+
 
 async function getNetworkPrivacyStatus() {
   const settings = await getSettings();
@@ -263,11 +262,14 @@ const TRACKER_RULESET_ID = 'tracker_rules';
 async function applyRuleSets() {
   const s = await getSettings();
   const wanted = [];
-  if (s.enabled && s.modules.headers) wanted.push(HEADER_RULESET_ID);
-  if (s.enabled) wanted.push(TRACKER_RULESET_ID);
-  if (s.enabled) wanted.push('ad_rules');
-  if (s.enabled) wanted.push('url_rules');
-  if (s.enabled && s.modules.network) wanted.push('network_rules');
+
+  if (s.enabled) {
+    if (s.modules.headers) wanted.push('header_rules');
+    if (s.modules.trackers) wanted.push('tracker_rules');
+    if (s.modules.ads) wanted.push('ad_rules');
+    if (s.modules.urlCleaner) wanted.push('url_rules');
+    if (s.modules.network) wanted.push('network_rules');
+  }
 
   try {
     const current = await chrome.declarativeNetRequest.getEnabledRulesets();
@@ -283,6 +285,7 @@ async function applyRuleSets() {
     console.error('[PrivacyShield] Ruleset toggle failed:', err);
   }
 }
+
 
 // ─── Per-Tab Identity Tracking ───────────────────────────────────────────────
 //
@@ -525,35 +528,28 @@ function sanitizeIncomingSettings(raw) {
 
 function normalizeSettings(raw) {
   const normalized = deepMerge(DEFAULT_SETTINGS, sanitizeIncomingSettings(raw || {}));
-  // 4.4+ is a single hardened posture: compatibility mode cannot be used to
-  // re-enable high-entropy location/device surfaces.
 
   normalized.securityMode = 'maximum_direct';
-
-  if (normalized.securityMode === 'maximum_direct') {
-    // Maximum mode is immutable/fail-closed: page-controlled settings,
-    // popup races and malformed storage cannot disable the protection layer.
-    normalized.enabled = true;
-    // These protections are the direct-connection safety floor. They are
-    // never weakened by malformed storage, popup races or page-controlled data.
-    for (const key of Object.keys(DEFAULT_SETTINGS.modules)) {
-      normalized.modules[key] = true;
-    }
-    normalized.geolocationMode = 'deny';
-    normalized.networkPrivacy = { mode: 'direct_hardened' };
-  }
+  normalized.networkPrivacy = { mode: 'direct_hardened' };
+  normalized.excludedDomains = Array.isArray(normalized.excludedDomains) ? normalized.excludedDomains : [];
+  normalized.modules = {
+    ...DEFAULT_SETTINGS.modules,
+    ...(normalized.modules || {}),
+  };
 
   return normalized;
 }
+
 
 function settingsRequireReload(previous, next) {
   if (!previous || !next) return true;
   if (previous.enabled !== next.enabled) return true;
   if (JSON.stringify(previous.excludedDomains || []) !== JSON.stringify(next.excludedDomains || [])) return true;
 
-  const reloadModules = ['webrtc', 'canvas', 'webgl', 'audio', 'fonts', 'navigator', 'screen', 'permissions', 'network'];
+  const reloadModules = Object.keys(DEFAULT_SETTINGS.modules);
   return reloadModules.some((key) => previous.modules?.[key] !== next.modules?.[key]);
 }
+
 
 async function reloadProtectionTabs() {
   const tabs = await chrome.tabs.query({});
@@ -650,10 +646,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
 
           const current = await getSettings();
-          if (current.securityMode === 'maximum_direct') {
-            sendResponse({ success: false, error: 'Site exceptions are disabled in maximum direct mode.' });
-            break;
-          }
           const excludedDomains = new Set(current.excludedDomains || []);
           const excluded = !excludedDomains.has(domain);
           if (excluded) excludedDomains.add(domain);
