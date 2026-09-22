@@ -1,16 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Privacy Shield",
-  "version": "2.3.0",
-  "description": "Fail-closed IP privacy with mandatory proxy routing, WebRTC leak prevention, fingerprint protection, tracker blocking, site exceptions and per-tab identity controls.",
+  "version": "3.0.0",
+  "description": "Direct-connection privacy hardening for Chromium: anti-fingerprinting, WebRTC/WebTransport isolation, tracker blocking, reduced browser telemetry, site controls and fail-closed privacy policies. No proxy, VPN or Tor dependency.",
   "minimum_chrome_version": "128",
   "permissions": [
     "privacy",
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
     "storage",
-    "tabs",
-    "proxy"
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -65,6 +64,11 @@
         "id": "tracker_rules",
         "enabled": true,
         "path": "rules/trackers.json"
+      },
+      {
+        "id": "network_rules",
+        "enabled": true,
+        "path": "rules/network.json"
       }
     ]
   },
