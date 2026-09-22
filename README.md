@@ -22,7 +22,7 @@ CRXJS supports Vite-bundled isolated and MAIN-world content scripts; MAIN-world 
 
 ## Privacy layers
 
-The hardened build blocks browser Geolocation, common public-IP discovery and third-party IP-geolocation APIs, WebRTC/WebTransport/WebSocket/EventSource/ping surfaces, Bluetooth/USB/HID/Serial/MIDI and sensor surfaces, high-entropy Client Hints, Storage Access API re-grants, service-worker registration and push subscriptions.
+The hardened build blocks browser Geolocation, common public-IP discovery and third-party IP-geolocation APIs, WebRTC/WebTransport/WebSocket/EventSource/ping surfaces, Bluetooth/USB/HID/Serial/MIDI and sensor surfaces, high-entropy Client Hints, Storage Access API re-grants, service-worker registration and push subscriptions. Canvas protection also covers OffscreenCanvas 2D export paths, while Navigator hardening standardizes common OS media-query preferences exposed through matchMedia().
 
 It also standardizes the page locale to en-US and the HTTP Accept-Language profile, applies browser content-setting controls where supported, and removes high-confidence tracking query parameters with declarative DNR.
 
