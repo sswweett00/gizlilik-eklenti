@@ -481,35 +481,8 @@
       }
     }
 
-    // Sanitize SDP to strip host candidates (which leak local IPs)
-    function sanitizeSDP(desc) {
-      if (!desc || !desc.sdp) return desc;
-      const clean = desc.sdp
-        .split('\\n')
-        .filter((l) => !(l.includes('a=candidate') && l.includes('typ host')))
-        .join('\\n');
-      return new RTCSessionDescription({ type: desc.type, sdp: clean });
-    }
-
-    if (window.RTCPeerConnection && false) {
-      overrideMethod(RTCPeerConnection.prototype, 'createOffer', function (orig, args) {
-        return orig.apply(this, args).then(sanitizeSDP);
-      });
-      overrideMethod(RTCPeerConnection.prototype, 'createAnswer', function (orig, args) {
-        return orig.apply(this, args).then(sanitizeSDP);
-      });
-      overrideMethod(RTCPeerConnection.prototype, 'setLocalDescription', function (orig, args) {
-        // Preserve the native overload exactly. Passing an explicit undefined
-        // second argument triggers Chrome's legacy callback overload and causes
-        // "parameter 2 is not of type Function".
-        const nextArgs = Array.from(args);
-        if (nextArgs.length > 0 && nextArgs[0] && nextArgs[0].sdp) {
-          nextArgs[0] = sanitizeSDP(nextArgs[0]);
-        }
-        return orig.apply(this, nextArgs);
-      });
-    }
-
+    // WebRTC is fully disabled in direct hardened mode, so no SDP mutation
+    // or setLocalDescription overload patch is necessary.
     if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
       Object.defineProperty(navigator.mediaDevices, 'enumerateDevices', {
         value: markNative(() => Promise.resolve([]), 'enumerateDevices'),
