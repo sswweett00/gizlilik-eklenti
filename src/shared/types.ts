@@ -14,7 +14,7 @@ export interface ExtensionSettings {
   modules: ExtensionModules;
   timezone: 'auto' | string;
   geolocationMode: GeolocationMode;
-  spoofedLocation: null;
+  spoofedLocation: { latitude: number; longitude: number; accuracy: number };
   excludedDomains: string[];
   networkPrivacy: { mode: NetworkMode };
 }
