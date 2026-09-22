@@ -488,6 +488,19 @@ async function applyNetworkProxy() {
   } catch (err) {
     console.error('[PrivacyShield] Local Tor proxy apply/restore failed:', err);
     if (torSelected) {
+      await chrome.storage.session.set({
+        torVerification: {
+          verified: false,
+          reason: 'proxy_apply_error',
+          verifiedAt: Date.now(),
+        },
+        lastProxyError: {
+          message: String(err?.message || err),
+          details: 'Tor kill-switch remains enabled.',
+          fatal: true,
+          at: Date.now(),
+        },
+      });
       await setTorKillSwitch(true);
     }
   }
@@ -505,6 +518,13 @@ if (chrome.proxy?.onProxyError) {
         },
       });
       if (settings.enabled && settings.networkPrivacy?.mode === 'local_tor') {
+        await chrome.storage.session.set({
+          torVerification: {
+            verified: false,
+            reason: 'proxy_error',
+            verifiedAt: Date.now(),
+          },
+        });
         await setTorKillSwitch(true);
       }
     }).catch(() => {});
